@@ -43,6 +43,7 @@ Restart is required for proper display.
 ## TODOs
 - Add more injection methods
 - Add more launch methods
+- Validate user input
 - Use virtual console sequences for printing (maybe)
 - GUI (some day)
 
