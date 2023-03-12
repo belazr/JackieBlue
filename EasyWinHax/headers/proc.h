@@ -38,7 +38,7 @@ namespace proc {
 		// If there are multiple proccesses with the same name the id of one of them is returned.
 		DWORD getProcId(const char* procName);
 
-		// Gets the process entry of a snapshot of CreateToolhelp32Snapshot by process name.
+		// Gets a process entry of a snapshot of CreateToolhelp32Snapshot by process name.
 		// 
 		// Parameters:
 		// 
@@ -53,7 +53,7 @@ namespace proc {
 		// True on success, false on failure or if process was not found.
 		bool getTlHelpProcEntry(const char* procName, PROCESSENTRY32* pProcEntry);
 
-		// Gets the module entry of a snapshot of CreateToolhelp32Snapshot by module name.
+		// Gets a module entry of a snapshot of CreateToolhelp32Snapshot by module name.
 		// 
 		// Parameters:
 		// 
@@ -65,15 +65,33 @@ namespace proc {
 		// Name of the module.
 		// 
 		// [out] pModEntry:
-		// Address of the module entry structure of the module that receives the information about the module.
+		// Address of the module entry structure that receives the information about the module.
 		// If there are multiple modules with the same name the structure of one of them is returned.
 		// 
 		// Return:
 		// True on success, false on failure or if module was not found.
 		bool getTlHelpModEntry(HANDLE hProc, const char* modName, MODULEENTRY32* pModEntry);
 
+		// Gets a thread entry of a snapshot of CreateToolhelp32Snapshot by owning process.
+		// 
+		// Parameters:
+		// 
+		// [in] hProc:
+		// Handle to the process which threads should be searched.
+		// Needs at least PROCESS_QUERY_LIMITED_INFORMATION access rights.
+		// 
+		// [out] pThreadEntry:
+		// Address of the thread entry structure that receives the information about the thread.
+		// The thread entry will have a different th32ThreadID value than the structure passed to the function.
+		// This way threads of a specific process can be enumerated.
+		// If there are multiple threads with the same owning process and differing thread ids the structure of one of them is returned.
+		// 
+		// Return:
+		// True on success, false on failure or if no thread was found.
+		bool getTlHelpThreadEntry(HANDLE hProc, THREADENTRY32* pThreadEntry);
+
 		// Gets the address of a function/procedure exported by a module of an external target process within the virtual address space this process.
-		// Works like an external version of GetProcAddress of the Win32 API but just for exports by name.
+		// Works like an external version of GetProcAddress of the Win32 API.
 		// Uses only calls to ReadProcessMemory and NtQueryInformationProcess (for forwared functions) of the Win32 API.
 		// Supports function forwarding but NOT FOR VIRTUAL DLLS (e.g. api-ms-win-...dll) using the ApiSetSchema.
 		// 
@@ -87,7 +105,7 @@ namespace proc {
 		// Handle to the module that exports the function.
 		// 
 		// [in] funcName:
-		// Export name of the exported function. Has to be exported by name.
+		// Export name or ordinal of the exported function..
 		// 
 		// Return:
 		// Address of the exported function within the virtual address space of the target process or nullptr on failure or if procedure was not found.
@@ -148,7 +166,7 @@ namespace proc {
 		// The process id of the target process.
 		// 
 		// [in] modName:
-		// The name of the module.
+		// The name of the module. If nullptr returns a handle to the module of the file used to create the calling process (.exe file).
 		// 
 		// Return:
 		// Handle to the module or nullptr on failure or if the module was not found.
@@ -166,7 +184,7 @@ namespace proc {
 		// Needs at least PROCESS_QUERY_LIMITED_INFORMATION and PROCESS_VM_READ access rights.
 		// 
 		// [in] modName:
-		// The name of the module.
+		// The name of the module. If nullptr returns a handle to the module of the file used to create the calling process (.exe file).
 		// 
 		// Return:
 		// Handle to the module or nullptr on failure or if the module was not found.
@@ -183,7 +201,7 @@ namespace proc {
 		// Needs at least PROCESS_QUERY_LIMITED_INFORMATION and PROCESS_VM_READ access rights.
 		// 
 		// [in] modName:
-		// The name of the module.
+		// The name of the module. If nullptr returns the address of the x64 loader data table entry of the module of the file used to create the calling process (.exe file).
 		//
 		// Return:
 		// Address of the loader data table entry of the module or nullptr on failure or if the entry was not found.
@@ -200,7 +218,7 @@ namespace proc {
 		// Needs at least PROCESS_QUERY_LIMITED_INFORMATION and PROCESS_VM_READ access rights.
 		// 
 		// [in] modName:
-		// The name of the module.
+		// The name of the module. If nullptr returns the address of the x86 loader data table entry of the module of the file used to create the calling process (.exe file).
 		// 
 		// Return:
 		// Address of the loader data table entry of the module or nullptr on failure or if the entry was not found.
@@ -242,7 +260,7 @@ namespace proc {
 	namespace in {
 
 		// Gets the address of a function/procedure exported by a module of the caller process within the virtual address space of the process.
-		// Works like GetProcAddress of the Win32 API but just for exports by name.
+		// Works like GetProcAddress of the Win32 API.
 		// Uses no calls to functions of the Win32 API.
 		// Supports function forwarding but NOT WITH VIRTUAL DLLS (e.g. api-ms-win-...dll) using the ApiSetSchema.
 		// 
@@ -252,7 +270,7 @@ namespace proc {
 		// Handle to the module that exports the function.
 		// 
 		// [in] funcName:
-		// Export name of the exported function. Has to be exported by name.
+		// Export name or ordinal of the exported function..
 		// 
 		// Return:
 		// Address of the exported function within the virtual address space of the caller process or nullptr on failure or if procedure not found.
@@ -303,7 +321,7 @@ namespace proc {
 		// Parameters:
 		// 
 		// [in] modName:
-		// The name of the module.
+		// The name of the module. If nullptr returns a handle to module of the file used to create the calling process (.exe file).
 		// 
 		// Return:
 		// Handle to the module or nullptr if the module was not found.
@@ -314,7 +332,7 @@ namespace proc {
 		// Parameters:
 		// 
 		// [in] modName:
-		// The name of the module.
+		// The name of the module. If nullptr returns the address of the loader data table entry of the module of the file used to create the calling process (.exe file).
 		// 
 		// Return:
 		// Address of the loader data table entry of the module or nullptr if the entry was not found.
