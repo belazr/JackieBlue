@@ -3,7 +3,7 @@
 
 namespace loadLib {
 
-	// Performs a dll injection creating a remote thread in the target process that calls LoadLibrary to load the dll.
+	// Performs a dll injection by creating a remote thread in the target process that calls LoadLibrary to load the module.
 	// 
 	// Parameters:
 	// 

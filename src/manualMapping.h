@@ -3,8 +3,8 @@
 
 namespace manMap {
 
-	// Performs a dll injection by manually mapping the dll to the target process.
-	// Fixing the import address table, relocation and tls callback execution is done by shell code injected into the target process and started by CreateRemoteThread.
+	// Performs a dll injection by manually mapping the module to the target process.
+	// Relocation, fixing the import address table and tls callback execution is done by shell code injected into the target process and started by CreateRemoteThread.
 	// The shell code still calls Loadlibrary and GetProcAddress to fix the IAT.
 	// 
 	// Parameters:
