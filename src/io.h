@@ -100,6 +100,18 @@ namespace io {
 	// Info message to be printed.
 	void printInfo(std::string msg);
 
+	
+	// Formats a pointer to a string with format 0xXXXXXXXX...
+	//
+	// Parameters:
+	//
+	// [in] ptr:
+	// Pointer that should be formatted for output.
+	//
+	// Return:
+	// The pointer value as a string of format  0xXXXXXXXX...
+	std::string formatPointer(void* ptr);
+
 	// Clears the logging section.
 	void clearLog();
 }
