@@ -1,5 +1,7 @@
 #include "io.h"
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 
 #define HEADER "\
     /$$$$$                     /$$       /$$           /$$$$$$$  /$$                    \n\
@@ -210,6 +212,17 @@ namespace io {
 		cursorAfterLog = getCursorPosition();
 
 		return;
+	}
+
+
+	std::string formatPointer(void* ptr) {
+		std::stringstream stream;
+		stream
+			<< "0x"
+			<< std::setfill('0') << std::setw(sizeof(uintptr_t) * 2)
+			<< std::hex << reinterpret_cast<uintptr_t>(ptr);
+
+		return stream.str();;
 	}
 
 

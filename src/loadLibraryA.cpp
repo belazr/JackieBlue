@@ -55,7 +55,7 @@ namespace loadLib {
 
 		// writes dll path to target process including terminating null character
 		if (!WriteProcessMemory(hProc, pDllPath, dllPath, strlen(dllPath) + 1, nullptr)) {
-			io::printWinError("Failed to write to target process.");
+			io::printWinError("Failed to write dll path to target process.");
 			VirtualFreeEx(hProc, pDllPath, 0, MEM_RELEASE);
 			
 			return false;
@@ -64,7 +64,7 @@ namespace loadLib {
 		HMODULE hKernel32 = proc::ex::getModuleHandle(hProc, "kernel32.dll");
 		
 		if (!hKernel32) {
-			io::printWinError("Failed to get kernel32.dll module handle.");
+			io::printWinError("Failed to retrieve kernel32.dll module handle from target process.");
 			VirtualFreeEx(hProc, pDllPath, 0, MEM_RELEASE);
 			
 			return false;
@@ -73,22 +73,31 @@ namespace loadLib {
 		const FARPROC _LoadLibraryA = proc::ex::getProcAddress(hProc, hKernel32, "LoadLibraryA");
 		
 		if (!_LoadLibraryA) {
-			io::printWinError("LoadLibraryA address not found.");
+			io::printWinError("Failed to retrieve LoadLibraryA address from target process.");
 			VirtualFreeEx(hProc, pDllPath, 0, MEM_RELEASE);
 			
 			return false;
 		}
 
-		const HANDLE hThread = CreateRemoteThread(hProc, nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(_LoadLibraryA), pDllPath, 0, nullptr);
+		void* pModBase = nullptr;
 		
-		if (!hThread) {
-			io::printWinError("Thread creation failed.");
+		if (!launch::createRemoteThread(hProc, reinterpret_cast<launch::tLaunchFunc>(_LoadLibraryA), pDllPath, &pModBase)) {
+			io::printWinError("Failed to create and execute thread in target.");
 			VirtualFreeEx(hProc, pDllPath, 0, MEM_RELEASE);
 			
 			return false;
 		}
 
-		CloseHandle(hThread);
+		if (!pModBase) {
+			io::printPlainError("Failed to load module.");
+			VirtualFreeEx(hProc, pDllPath, 0, MEM_RELEASE);
+
+			return false;
+		}
+		
+		VirtualFreeEx(hProc, pDllPath, 0, MEM_RELEASE);
+
+		io::printInfo("Module loaded at: " + io::formatPointer(pModBase));
 
 		return true;
 	}
