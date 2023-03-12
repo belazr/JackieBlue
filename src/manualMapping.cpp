@@ -26,11 +26,13 @@ namespace manMap {
 		IsWow64Process(hProc, &isWow64);
 		
 		#ifndef _WIN64
+		
 		if (!isWow64) {
 			io::printPlainError("Can not unlink dll from x64 process. Please use the x64 binary.");
 			
 			return false;
 		}
+
 		#endif // !_WIN64
 
 		hax::FileLoader dllLoader = hax::FileLoader(dllPath);
@@ -64,9 +66,11 @@ namespace manMap {
 		if (!isWow64 && headers.pOptHeader64) {
 			
 			#ifdef _WIN64
+
 			pNtHeaders = reinterpret_cast<const IMAGE_NT_HEADERS*>(headers.pNtHeaders64);
 			pPrefBase = reinterpret_cast<BYTE*>(headers.pOptHeader64->ImageBase);
 			imgSize = headers.pOptHeader64->SizeOfImage;
+			
 			#endif // _WIN64
 
 		}
@@ -203,11 +207,15 @@ namespace manMap {
 			memset(pBase + 2 * sizeof(UINT32), 0, sizeof(BYTE));
 		}
 		else {
+			
 			#ifdef _WIN64
+
 			memcpy_s(pBase, sizeof(data), &data, sizeof(data));
 			// sets flag to signal shell code execution to zero
 			memset(pBase + sizeof(data), 0, sizeof(BYTE));
+			
 			#endif // _WIN64
+		
 		}
 
 	}
@@ -243,7 +251,9 @@ namespace manMap {
 		else {
 			
 			#ifdef _WIN64
+
 			pShellCode = static_cast<BYTE*>(VirtualAllocEx(hProc, nullptr, 0x500, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+			
 			#endif // _WIN64
 
 		}
@@ -307,13 +317,18 @@ namespace manMap {
 	}
 
 	#ifdef _WIN64
+
 	#define HAS_RELOC_FLAG(relativeInfo) ((relativeInfo >> 0xC) == IMAGE_REL_BASED_DIR64)
+	
 	#else
+	
 	#define HAS_RELOC_FLAG(relativeInfo) ((relativeInfo >> 0xC) == IMAGE_REL_BASED_HIGHLOW)
+	
 	#endif // _WIN64
 
 	// only compile in x64 because the precompiled shell code for x86 (x86shell) is already in the file
 	#ifdef _WIN64
+
 	typedef HINSTANCE(WINAPI* tDllEntryPoint)(void* hDll, DWORD dwReason, void* pReserved);
 
 	__declspec(noinline) void __stdcall shell(BYTE* pImageBase) {
@@ -420,6 +435,7 @@ namespace manMap {
 		// sets flag to signal success
 		*(pImageBase + sizeof(ManMapFuncs)) = 0x1;
 	}
+
 	#endif // _WIN64
 
 }
