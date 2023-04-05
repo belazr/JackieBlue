@@ -8,18 +8,16 @@
 namespace io {
 
 	// All possible actions that can be selected by the user.
-	enum action { EXIT, LOAD_LIB, MAN_MAP, UNLINK, CHANGE_TARGETS, ACTION_COUNT };
+	enum action { EXIT = 0, LOAD_LIB, MAN_MAP, UNLINK, CHANGE_TARGETS, ACTION_COUNT };
+	enum launchMethod { CREATE_THREAD = 1, HIJACK_THREAD, SET_WINDOWS_HOOK, HOOK_BEGIN_PAINT, QUEUE_USER_APC, LAUNCH_METHOD_COUNT };
 
-	// The labels for the actions.
-	extern std::unordered_map<action, std::string> actionLabels;
-
-	// Sets the handle of the console to be written to.
-	void setConsoleHandle();
+	// Sets the console output handle to std out.
+	void init();
 
 	// Prints the header.
 	void printHeader();
 	
-	// Prints the Menu.
+	// Prints the menu.
 	// 
 	// Parameters:
 	// 
@@ -32,20 +30,36 @@ namespace io {
 	// [in] dllDir:
 	// DLL parent directory.
 	// 
-	// [in] select:
+	// [in] curAction:
 	// Action currently selected. Number is printed in brackets: " [2] label".
-	void printMenu(std::string procName, std::string dllName, std::string dllDir, action select);
+	void printMenu(std::string procName, std::string dllName, std::string dllDir, action action);
+
+	// Prints the sub menu to select the launch method.
+	// 
+	// Parameters:
+	// 
+	// [in] curLaunchMethod:
+	// Launch method currently selected. Number is printed in brackets: " [2] label".
+	void printLaunchMethodMenu(launchMethod curLaunchMethod);
 	
-	// Clears the menu.
-	void clearMenu();
+	// Clears everything but the log of the visible console screen.
+	void clearScreen();
 
 	// Lets the user select an action to be executed.
 	// 
 	// Parameters:
 	// 
+	// [in/out] pAction:
+	// Action currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
+	void selectAction(action* pAction);
+
+	// Lets the user select the launch method of the code to execute the injection.
+	// 
+	// Parameters:
+	// 
 	// [in/out] pSelect:
-	// Action currently selected. On valid user input this is the new action selected. For invalid input it keeps the value.
-	void selectAction(action* pSelect);
+	// Launch method currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
+	void selectLaunchMethod(launchMethod* pLaunchMethod);
 
 	// Lets the user select the targets.
 	// 
@@ -100,6 +114,17 @@ namespace io {
 	// Info message to be printed.
 	void printInfo(std::string msg);
 
+
+	// Prints the result message for an action.
+	// 
+	// Parameters:
+	//
+	// [in] curAction:
+	// The executed action
+	// [in] curLaunchMethod:
+	// The launch method used for the action if applicable.
+	void printInjectionResult(action curAction, launchMethod curLaunchMethod, bool success);
+
 	
 	// Formats a pointer to a string with format 0xXXXXXXXX...
 	//
@@ -110,7 +135,7 @@ namespace io {
 	//
 	// Return:
 	// The pointer value as a string of format  0xXXXXXXXX...
-	std::string formatPointer(void* ptr);
+	std::string formatPointer(uintptr_t ptr);
 
 	// Clears the logging section.
 	void clearLog();

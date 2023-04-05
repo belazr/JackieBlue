@@ -40,13 +40,14 @@ namespace ldr {
     template <typename LDTE>
     static bool unlinkLdrEntry(HANDLE hProc, const LDTE* pLdrEntry) {
 
-        if (!pLdrEntry) {
-            io::printWinError("Loader data table entry not found.");
-
-                return false;
+        if (pLdrEntry) {
+            io::printInfo("Found module in target process.");
         }
         else {
-            io::printInfo("Dll found in target process.");
+            io::printWinError("Could not find module in target process.");
+            
+
+            return false;
         }
         
         LDTE ldrEntry{};

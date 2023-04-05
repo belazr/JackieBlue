@@ -1,14 +1,27 @@
 #pragma once
 #include "undocWinTypes.h"
-#include <TlHelp32.h>
 
 // Functions to retrieve information about of a windows process.
 // Some functions are implemented to emulate functions of the Win32 API and delcared as similarly as possible.
 // These Win32 API calls could be replaced for example to avoid simple detections.
-// Most functions are defined to interact with the caller process as well as an external process.
-// The x64 compilations of these functions are capable of interacting with both x86 as well as x64 target processes.
 
 namespace proc {
+
+	// Alike PROCESSENTRY32 from the TlHelp32 library without the unused or unnecessary fields.
+	typedef struct ProcessEntry {
+		DWORD processId;
+		DWORD threadCount;
+		DWORD parentProcessId;
+		LONG basePriority;
+		char exeFile[MAX_PATH];
+	}ProcessEntry;
+
+	typedef struct ThreadEntry {
+		DWORD threadId;
+		DWORD ownerProcessId;
+		THREAD_STATE threadState;
+		KWAIT_REASON waitReason;
+	}ThreadEntry;
 
 	typedef struct PeHeaders {
 		const IMAGE_DOS_HEADER* pDosHeader;
@@ -21,74 +34,54 @@ namespace proc {
 		const IMAGE_OPTIONAL_HEADER64* pOptHeader64;
 	}PeHeaders;
 
+	// Gets the process id by process name.
+	// 
+	// Parameters:
+	// 
+	// [in] processName:
+	// Name of the process.
+	// 
+	// Return:
+	// Process id of the process, 0 on failure or no process was found.
+	// If there are multiple proccesses with the same name, the id of one of them is returned.
+	DWORD getProcessId(const char* processName);
+
+	// Gets a process entry struct by process ID.
+	// 
+	// Parameters:
+	// 
+	// [in] processName:
+	// Process ID of the process.
+	// 
+	// [out] pProcessEntry:
+	// Address of the process entry structure that receives the information about the process.
+	// 
+	// Return:
+	// True on success, false on failure or if process was not found.
+	bool getProcessEntry(DWORD processId, ProcessEntry* pProcessEntry);
+
+	// Gets the ThreadEntry structs of all execution threads started by a process.
+	// 
+	// Parameters:
+	// 
+	// [in] processId:
+	// Process ID of the owning process of the threads.
+	// 
+	// [out] pThreadEntries:
+	// Address of a buffer for the ThreadEntry structs.
+	// 
+	// [in]
+	// size:
+	// Size of the buffer in ThreadEntry structs.
+	// 
+	// Return:
+	// True on success, false on failure or if the buffer was too small.
+	bool getProcessThreadEntries(DWORD processId, ThreadEntry* pThreadEntries, size_t size);
+
 	// Functions to retrieve information about an external process.
 	// Compiled as x64 the external functions are designed to work both on x64 targets as well as x86 targets.
 	// Compiled as x86 interacting with x64 processes is neihter supported nor feasable.
 	namespace ex {
-
-		// Gets the process id by process name.
-		// 
-		// Parameters:
-		// 
-		// [in] procName:
-		// Name of the process.
-		// 
-		// Return:
-		// Process id of the process, 0 on failure or no process was found.
-		// If there are multiple proccesses with the same name the id of one of them is returned.
-		DWORD getProcId(const char* procName);
-
-		// Gets a process entry of a snapshot of CreateToolhelp32Snapshot by process name.
-		// 
-		// Parameters:
-		// 
-		// [in] procName:
-		// Name of the process.
-		// 
-		// [out] pProcEntry:
-		// Address of the process entry structure that receives the information about the process.
-		// If there are multiple proccesses with the same name the structure of one of them is returned.
-		// 
-		// Return:
-		// True on success, false on failure or if process was not found.
-		bool getTlHelpProcEntry(const char* procName, PROCESSENTRY32* pProcEntry);
-
-		// Gets a module entry of a snapshot of CreateToolhelp32Snapshot by module name.
-		// 
-		// Parameters:
-		// 
-		// [in] hProc:
-		// Handle to the process which modules should be searched.
-		// Needs at least PROCESS_QUERY_LIMITED_INFORMATION access rights.
-		// 
-		// [in] modName:
-		// Name of the module.
-		// 
-		// [out] pModEntry:
-		// Address of the module entry structure that receives the information about the module.
-		// If there are multiple modules with the same name the structure of one of them is returned.
-		// 
-		// Return:
-		// True on success, false on failure or if module was not found.
-		bool getTlHelpModEntry(HANDLE hProc, const char* modName, MODULEENTRY32* pModEntry);
-
-		// Gets a thread entry of a snapshot of CreateToolhelp32Snapshot by owning process.
-		// 
-		// Parameters:
-		// 
-		// [in] hProc:
-		// Handle to the process which threads should be searched.
-		// Needs at least PROCESS_QUERY_LIMITED_INFORMATION access rights.
-		// 
-		// [out] pThreadEntry:
-		// Address of the thread entry structure that receives the information about the thread.
-		// The thread entry will have a different th32ThreadID value than the structure passed to the function.
-		// This way threads of a specific process can be enumerated.
-		// If there are multiple threads with the same owning process and differing thread ids the structure of one of them is returned.
-		// 
-		// Return:
-		// True on success, false on failure or if no thread was found.
-		bool getTlHelpThreadEntry(HANDLE hProc, THREADENTRY32* pThreadEntry);
 
 		// Gets the address of a function/procedure exported by a module of an external target process within the virtual address space this process.
 		// Works like an external version of GetProcAddress of the Win32 API.
@@ -162,7 +155,7 @@ namespace proc {
 		// 
 		// Parameters:
 		// 
-		// [in] procId:
+		// [in] processId:
 		// The process id of the target process.
 		// 
 		// [in] modName:
@@ -170,7 +163,7 @@ namespace proc {
 		// 
 		// Return:
 		// Handle to the module or nullptr on failure or if the module was not found.
-		HMODULE getModuleHandle(DWORD procId, const char* modName);
+		HMODULE getModuleHandle(DWORD processId, const char* modName);
 
 		// Gets a handle to a module of an external target process.
 		// The value of the handle is equivalent to the base address of the module within the virtual address space of the target process.
