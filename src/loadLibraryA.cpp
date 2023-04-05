@@ -1,18 +1,19 @@
 #include "loadLibraryA.h"
 #include "io.h"
-#include <hax.h>
 
 namespace loadLib {
 	
-	bool inject(HANDLE hProc, const char* dllPath) {
+	bool inject(HANDLE hProc, const char* dllPath, launch::tLaunchFunc pLaunchFunc) {
 		BOOL isWow64 = FALSE;
 		IsWow64Process(hProc, &isWow64);
 		
 		#ifndef _WIN64
+
 		if (!isWow64) {
 			io::printPlainError("Can not inject into x64 process. Please use the x64 binary.");
 			return false;
 		}
+		
 		#endif // !_WIN64
 
 		// loads dll to memory to check compatibility
@@ -61,7 +62,7 @@ namespace loadLib {
 			return false;
 		}
 
-		HMODULE hKernel32 = proc::ex::getModuleHandle(hProc, "kernel32.dll");
+		const HMODULE hKernel32 = proc::ex::getModuleHandle(hProc, "kernel32.dll");
 		
 		if (!hKernel32) {
 			io::printWinError("Failed to retrieve kernel32.dll module handle from target process.");
@@ -79,10 +80,10 @@ namespace loadLib {
 			return false;
 		}
 
-		void* pModBase = nullptr;
-		
-		if (!launch::createRemoteThread(hProc, reinterpret_cast<launch::tLaunchFunc>(_LoadLibraryA), pDllPath, &pModBase)) {
-			io::printWinError("Failed to create and execute thread in target.");
+		uintptr_t pModBase = 0;
+
+		if (!pLaunchFunc(hProc, reinterpret_cast<launch::tLaunchableFunc>(_LoadLibraryA), pDllPath, &pModBase)) {
+			io::printWinError("Failed to launch code execution in target process.");
 			VirtualFreeEx(hProc, pDllPath, 0, MEM_RELEASE);
 			
 			return false;

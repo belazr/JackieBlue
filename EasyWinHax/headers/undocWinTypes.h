@@ -6,6 +6,12 @@
 // Use with care!
 // Especially the architecture specific structures are not complete and only defined as needed.
 
+//
+// 
+// NTSTATUS
+#define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
+#define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xC0000004L)
+
 typedef struct _UNICODE_STRING
 {
     USHORT Length;
@@ -518,7 +524,7 @@ typedef struct _LDR_DATA_TABLE_ENTRY64 {
 } LDR_DATA_TABLE_ENTRY64, * PLDR_DATA_TABLE_ENTRY64;
 //
 //
-// NtNtQueryInformationProcess
+// NtQueryInformationProcess
 typedef LONG KPRIORITY, * PKPRIORITY;
 
 typedef struct _PROCESS_BASIC_INFORMATION {
@@ -633,6 +639,7 @@ typedef enum _SYSTEM_INFORMATION_CLASS {
     SystemTimeOfDayInformation = 3,
     SystemProcessInformation = 5,
     SystemProcessorPerformanceInformation = 8,
+    SystemHandleInformation = 16,
     SystemInterruptInformation = 23,
     SystemExceptionInformation = 33,
     SystemRegistryQuotaInformation = 37,
@@ -641,30 +648,116 @@ typedef enum _SYSTEM_INFORMATION_CLASS {
     SystemPolicyInformation = 134,
 } SYSTEM_INFORMATION_CLASS;
 
+typedef enum _KWAIT_REASON {
+    Executive,
+    FreePage,
+    PageIn,
+    PoolAllocation,
+    DelayExecution,
+    Suspended,
+    UserRequest,
+    WrExecutive,
+    WrFreePage,
+    WrPageIn,
+    WrPoolAllocation,
+    WrDelayExecution,
+    WrSuspended,
+    WrUserRequest,
+    WrEventPair,
+    WrQueue,
+    WrLpcReceive,
+    WrLpcReply,
+    WrVirtualMemory,
+    WrPageOut,
+    WrRendezvous,
+    WrKeyedEvent,
+    WrTerminated,
+    WrProcessInSwap,
+    WrCpuRateControl,
+    WrCalloutStack,
+    WrKernel,
+    WrResource,
+    WrPushLock,
+    WrMutex,
+    WrQuantumEnd,
+    WrDispatchInt,
+    WrPreempted,
+    WrYieldExecution,
+    WrFastMutex,
+    WrGuardedMutex,
+    WrRundown,
+    WrAlertByThreadId,
+    WrDeferredPreempt,
+    MaximumWaitReason
+} KWAIT_REASON;
+
+typedef enum _THREAD_STATE {
+    Initialized,
+    Ready,
+    Running,
+    Standby,
+    Terminated,
+    Waiting,
+    Transition,
+    TsUnknown,
+    MaximumThreadState
+} THREAD_STATE;
+
+typedef struct _CLIENT_ID {
+    HANDLE UniqueProcess;
+    HANDLE UniqueThread;
+} CLIENT_ID, * PCLIENT_ID;
+
+typedef struct _SYSTEM_THREAD_INFORMATION {
+    LARGE_INTEGER KernelTime;
+    LARGE_INTEGER UserTime;
+    LARGE_INTEGER CreateTime;
+    ULONG WaitTime;
+    PVOID StartAddress;
+    CLIENT_ID ClientId;
+    KPRIORITY Priority;
+    LONG BasePriority;
+    ULONG ContextSwitches;
+    THREAD_STATE ThreadState;
+    KWAIT_REASON WaitReason;
+} SYSTEM_THREAD_INFORMATION, * PSYSTEM_THREAD_INFORMATION;
+
 typedef struct _SYSTEM_PROCESS_INFORMATION {
     ULONG NextEntryOffset;
     ULONG NumberOfThreads;
-    BYTE Reserved1[48];
+    LARGE_INTEGER WorkingSetPrivateSize;
+    ULONG HardFaultCount;
+    ULONG NumberOfThreadsHighWatermark;
+    ULONGLONG CycleTime;
+    LARGE_INTEGER CreateTime;
+    LARGE_INTEGER UserTime;
+    LARGE_INTEGER KernelTime;
     UNICODE_STRING ImageName;
     KPRIORITY BasePriority;
     HANDLE UniqueProcessId;
-    PVOID Reserved2;
+    HANDLE InheritedFromUniqueProcessId;
     ULONG HandleCount;
     ULONG SessionId;
-    PVOID Reserved3;
+    ULONG_PTR UniqueProcessKey;
     SIZE_T PeakVirtualSize;
     SIZE_T VirtualSize;
-    ULONG Reserved4;
+    ULONG PageFaultCount;
     SIZE_T PeakWorkingSetSize;
     SIZE_T WorkingSetSize;
-    PVOID Reserved5;
+    SIZE_T QuotaPeakPagedPoolUsage;
     SIZE_T QuotaPagedPoolUsage;
-    PVOID Reserved6;
+    SIZE_T QuotaPeakNonPagedPoolUsage;
     SIZE_T QuotaNonPagedPoolUsage;
     SIZE_T PagefileUsage;
     SIZE_T PeakPagefileUsage;
     SIZE_T PrivatePageCount;
-    LARGE_INTEGER Reserved7[6];
+    LARGE_INTEGER ReadOperationCount;
+    LARGE_INTEGER WriteOperationCount;
+    LARGE_INTEGER OtherOperationCount;
+    LARGE_INTEGER ReadTransferCount;
+    LARGE_INTEGER WriteTransferCount;
+    LARGE_INTEGER OtherTransferCount;
+    SYSTEM_THREAD_INFORMATION Threads[1];
 } SYSTEM_PROCESS_INFORMATION, * PSYSTEM_PROCESS_INFORMATION;
 
 typedef NTSTATUS(__stdcall* tNtQuerySystemInformation) (
@@ -673,5 +766,12 @@ typedef NTSTATUS(__stdcall* tNtQuerySystemInformation) (
     ULONG SystemInformationLength,
     PULONG ReturnLength
 );
+//
+// 
+// RtlQueueApcWow64Thread
+typedef NTSTATUS(__stdcall* tRtlQueueApcWow64Thread)(HANDLE hThread, const void* pRoutine, void* pArg1, void* pArg2, void* pArg3);
 
-#define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
+//
+//
+// NtCreateThreadEx
+typedef NTSTATUS(__stdcall* tNtCreateThreadEx)(HANDLE* pThread, ACCESS_MASK DesiredAccess, PLONG ObjectAttributes, HANDLE hProcess, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, SIZE_T ZeroBits, SIZE_T dwStackSize, SIZE_T dwMaxStackSize, PVOID lpAttrListOut);

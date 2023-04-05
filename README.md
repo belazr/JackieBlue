@@ -1,7 +1,20 @@
 # JackieBlue
 JackieBlue is a basic DLL injector made with the EasyWinHax library.
-It supports LoadLibrary injections and manual mapping via shell code with CreateRemoteThread as the launch method.
-It is also able to unlink a module entry from a processes loader data table so it is harder to detect the injected DLL when using LoadLibrary injections. For manual mapping no loader data table entry is created anyway.
+
+It supports the injection methods:
+- LoadLibrary
+- Manual mapping via shell code
+
+and the following methods to launch the injection code in the target process:
+- Create thread
+- Hijack thread
+- Set windows hook
+- Hook NtUserBeginPaint
+- Queue user APC
+
+It is also able to unlink a module entry from a processes loader data table, so it is harder to detect the injected DLL when using LoadLibrary injections.
+For manual mapping no loader data table entry is created anyway.
+For further details regarding the launch methods see the included header files of the EasyWinHax library.
 The x64 binary is able to handle x86 as well as x64 targets.
 This project was created for personal use, learning purposes and fun.
 # Screenshot
@@ -26,14 +39,26 @@ Usage tested with:
 
 ## Build
 Open the solution file (JackieBlue.sln) with Visual Studio and run the desired builds from there.
-By default an executable with static runtime library linkage (/MT and /MTd) is built so it is completely protable.
+By default an executable with static runtime library linkage (/MT and /MTd) is built, so it is completely protable.
 
 ## Usage
 The x64 build supports both x86 as well as x64 targets.
-Launch the binary and enter the process name of the target process, the DLL file name you want to inject and the directory where the DLL is located. Select an injection method by entering the item numbers from to menu. Press enter.
-If no number is entered the method marked in brackets is executed.
+
+Launch the binary and enter the process name of the target process, the DLL file name you want to inject and the directory where the DLL is located.
+
+Select an action by entering the item number from to menu. Press enter.
+If no number is entered the action marked in brackets is selected.
+
+If a DLL injection (LoadLibraryA or manual mapping) was selected, the menu to select the launch method is displayed.
+Select a launch method by entering the item number from the menu. Press enter.
+If no number is entered the launch method marked in brackets is selected.
+"Set windows hook" and "Hook NtUserBeginPaint" will not work on console applications.
+"Set windows hook" will only work if injector and target process architectures match.
+
 The binary can also be launched from the command line setting the target, DLL and path like this:
+
 "JackieBlue.exe process.exe payload.dll c:\path"
+
 An icon for a shortcut is located in the "res" folder.
 
 ## Known issues
@@ -42,7 +67,6 @@ Restart is required for proper display.
 
 ## TODOs
 - Add more injection methods
-- Add more launch methods
 - Validate user input
 - Use virtual console sequences for printing (maybe)
 - GUI (some day)

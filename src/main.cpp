@@ -1,18 +1,16 @@
+#include "io.h"
 #include "manualMapping.h"
 #include "loadLibraryA.h"
 #include "unlinkDll.h"
-#include "io.h"
-#include <hax.h>
 
 static void takeAction(io::action select, std::string* pProcName, std::string* pDllName, std::string* pDllDir);
 
 int main(int argc, const char* argv[]) {
-	io::setConsoleHandle();
-	io::printHeader();
-	
 	std::string procName;
 	std::string dllName;
 	std::string dllDir;
+
+	io::init();
 
 	if (argc < 4) {
 		io::selectTargets(&procName, &dllName, &dllDir);
@@ -24,50 +22,98 @@ int main(int argc, const char* argv[]) {
 	}
 
 	// LoadLibrary injection as default
-	io::action select = io::action::LOAD_LIB;
+	io::action curAction = io::action::LOAD_LIB;
 
-	while (select != io::action::EXIT) {
-		io::printMenu(procName, dllName, dllDir, select);
-		io::selectAction(&select);
+	while (curAction != io::action::EXIT) {
+		io::printHeader();
+		io::printMenu(procName, dllName, dllDir, curAction);
+		io::selectAction(&curAction);
 
-		takeAction(select, &procName, &dllName, &dllDir);
+		takeAction(curAction, &procName, &dllName, &dllDir);
 
-		io::clearMenu();
+		io::clearScreen();
 	}
 
 	return 0;
 }
 
 
-static void takeDllAction(io::action select, std::string pProcName, std::string pDllName, std::string pDllDir);
+static void takeInjectionAction(io::action curAction, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
+static void takeUnlinkAction(const std::string* pProcName, const std::string* pDllName);
 
-static void takeAction(io::action select, std::string* pProcName, std::string* pDllName, std::string* pDllDir) {
-	
-	switch (select) {
+static void takeAction(io::action curAction, std::string* pProcName, std::string* pDllName, std::string* pDllDir) {
+
+	switch (curAction) {
+	case io::action::LOAD_LIB:
+	case io::action::MAN_MAP:
+		takeInjectionAction(curAction, pProcName, pDllName, pDllDir);
+		break;
+	case io::action::UNLINK:
+		takeUnlinkAction(pProcName, pDllName);
+		break;
 	case io::action::CHANGE_TARGETS:
 		io::selectTargets(pProcName, pDllName, pDllDir);
 		break;
 	case io::action::EXIT:
-		return;
+		break;
 	default:
-		takeDllAction(select, *pProcName, *pDllName, *pDllDir);
+		break;
 	}
 	
 	return;
 }
 
 
-static DWORD searchProcId(std::string procName);
+static HANDLE getProcessHandle(const std::string* pProcName);
+static launch::tLaunchFunc getLaunchFunction(HANDLE hProc, io::launchMethod launchMethod);
 
-static void takeDllAction(io::action select, std::string procName, std::string dllName, std::string dllDir) {
+static void takeInjectionAction(io::action curAction, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir) {
+	// create thread as default launch method
+	static io::launchMethod curLaunchMethod = io::launchMethod::CREATE_THREAD;
+
+	io::printLaunchMethodMenu(curLaunchMethod);
+	io::selectLaunchMethod(&curLaunchMethod);
 	io::clearLog();
 	io::printLogSeparator();
 
-	const DWORD procId = searchProcId(procName);
+	const HANDLE hProc = getProcessHandle(pProcName);
 
-	if (!procId) return;
+	if (!hProc) return;
 
-	const HANDLE hProc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procId);
+	const std::string dllFullPath = (*pDllDir + "\\" + *pDllName);
+	bool success = false;
+
+	const launch::tLaunchFunc pLaunchFunc = getLaunchFunction(hProc, curLaunchMethod);
+
+	if (!pLaunchFunc) return;
+
+	switch (curAction) {
+	case io::action::LOAD_LIB:
+		success = loadLib::inject(hProc, dllFullPath.c_str(), pLaunchFunc);
+		break;
+	case io::action::MAN_MAP:
+		success = manMap::inject(hProc, dllFullPath.c_str(), pLaunchFunc);
+		break;
+	default:
+		break;
+	}
+
+	CloseHandle(hProc);
+
+	io::printInjectionResult(curAction, curLaunchMethod, success);
+
+	return;
+}
+
+
+static DWORD searchProcId(const std::string* pProcName);
+
+static HANDLE getProcessHandle(const std::string* pProcName) {
+	const DWORD procId = searchProcId(pProcName);
+
+	if (!procId) return nullptr;
+
+	HANDLE hProc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procId);
 
 	if (!hProc || hProc == INVALID_HANDLE_VALUE) {
 		io::printWinError("Failed to get process handle.");
@@ -77,46 +123,20 @@ static void takeDllAction(io::action select, std::string procName, std::string d
 			io::printPlainError("Try running as administrator.");
 		}
 
-		return;
+		return nullptr;
 	}
 
-	std::string dllFullPath = (dllDir + "\\" + dllName);
-	bool successful = false;
-
-	switch (select) {
-	case io::action::LOAD_LIB:
-		successful = loadLib::inject(hProc, dllFullPath.c_str());
-		break;
-	case io::action::MAN_MAP:
-		successful = manMap::inject(hProc, dllFullPath.c_str());
-		break;
-	case io::action::UNLINK:
-		successful = ldr::unlinkModule(hProc, dllName.c_str());
-		break;
-	default:
-		break;
-	}
-
-	CloseHandle(hProc);
-
-	if (successful) {
-		io::printInfo(io::actionLabels.at(select) + " succeeded.");
-	}
-	else {
-		io::printPlainError(io::actionLabels.at(select) + " failed.");
-	}
-
-	return;
+	return hProc;
 }
 
 
-static DWORD searchProcId(std::string procName) {
-	io::printInfo("Looking for process '" + procName + "'...");
+static DWORD searchProcId(const std::string* pProcName) {
+	io::printInfo("Looking for process '" + *pProcName + "'...");
 	DWORD procId = 0;
 
 	// search for the process for five seconds
 	for (int i = 0; i < 50; i++) {
-		procId = proc::ex::getProcId(procName.c_str());
+		procId = proc::getProcessId(pProcName->c_str());
 
 		if (procId) break;
 
@@ -124,13 +144,85 @@ static DWORD searchProcId(std::string procName) {
 	}
 
 	if (!procId) {
-		io::printWinError("Target process not found.");
+		io::printWinError("Could not find target process.");
 
 		return 0;
 	}
 
-	io::printInfo("Target process found.");
+	io::printInfo("Found target process.");
 	io::printInfo("Process ID: " + std::to_string(procId));
 
 	return procId;
+}
+
+
+static launch::tLaunchFunc getLaunchFunction(HANDLE hProc, io::launchMethod launchMethod) {
+	BOOL isWow64 = FALSE;
+	IsWow64Process(hProc, &isWow64);
+	
+	launch::tLaunchFunc pLaunchFunc = nullptr;
+
+	switch (launchMethod) {
+	case io::launchMethod::CREATE_THREAD:
+		pLaunchFunc = launch::createThread;
+		break;
+	case io::launchMethod::HIJACK_THREAD:
+		pLaunchFunc = launch::hijackThread;
+		break;
+	case io::launchMethod::SET_WINDOWS_HOOK:
+		
+		#ifdef _WIN64
+
+		if (isWow64) {
+			io::printPlainError("\"Set windows hook\" on x86 targets only possible from x86 binary.");
+			
+			return nullptr;
+		}
+		
+		#else
+
+		if (!isWow64) {
+			io::printPlainError("\"Set windows hook\" on x64 targets only possible from x64 binary.");
+
+			return nullptr;
+		}
+
+		#endif // _WIN64
+
+		pLaunchFunc = launch::setWindowsHook;
+		break;
+	case io::launchMethod::HOOK_BEGIN_PAINT:
+		pLaunchFunc = launch::hookBeginPaint;
+		break;
+	case io::launchMethod::QUEUE_USER_APC:
+		pLaunchFunc = launch::queueUserApc;
+		break;
+	}
+
+	return pLaunchFunc;
+}
+
+
+static void takeUnlinkAction(const std::string* pProcName, const std::string* pDllName) {
+	io::clearLog();
+	io::printLogSeparator();
+
+	const HANDLE hProc = getProcessHandle(pProcName);
+
+	if (!hProc) return;
+
+	std::string resultString = "Unlinking of module";
+
+	if (ldr::unlinkModule(hProc, pDllName->c_str())) {
+		resultString += " succeeded.";
+		io::printInfo(resultString);
+	}
+	else {
+		resultString += " failed.";
+		io::printPlainError(resultString);
+	}
+
+	CloseHandle(hProc);
+
+	return;
 }
