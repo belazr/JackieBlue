@@ -16,8 +16,9 @@ namespace io {
 
 	// Prints the header.
 	void printHeader();
-	
-	// Prints the menu.
+
+
+	// Prints the target info.
 	// 
 	// Parameters:
 	// 
@@ -29,21 +30,26 @@ namespace io {
 	// 
 	// [in] dllDir:
 	// DLL parent directory.
+	void printTargetInfo(std::string procName, std::string dllName, std::string dllDir);
+	
+	// Prints the main menu.
+	// 
+	// Parameters:
 	// 
 	// [in] curAction:
 	// Action currently selected. Number is printed in brackets: " [2] label".
-	void printMenu(std::string procName, std::string dllName, std::string dllDir, action action);
+	void printMainMenu(action action);
 
 	// Prints the sub menu to select the launch method.
 	// 
 	// Parameters:
 	// 
+	// [in] curAction:
+	// Action currently selected.
+	// 
 	// [in] curLaunchMethod:
 	// Launch method currently selected. Number is printed in brackets: " [2] label".
-	void printLaunchMethodMenu(launchMethod curLaunchMethod);
-	
-	// Clears everything but the log of the visible console screen.
-	void clearScreen();
+	void printLaunchMethodMenu(action curAction, launchMethod curLaunchMethod);
 
 	// Lets the user select an action to be executed.
 	// 
@@ -78,8 +84,8 @@ namespace io {
 	// If the user presses enter without entering anythin it keeps the value.
 	void selectTargets(std::string* pProcName, std::string* pDllName, std::string* pDllDir);
 
-	// Prints  seperator for the logging section.
-	void printLogSeparator();
+	// Clears the logging section and prints a seperator.
+	void initLog();
 
 	// Prints an error message in red to the logging section including the last Win32-API error retrieved by GetLastError.
 	// 
@@ -137,6 +143,4 @@ namespace io {
 	// The pointer value as a string of format  0xXXXXXXXX...
 	std::string formatPointer(uintptr_t ptr);
 
-	// Clears the logging section.
-	void clearLog();
 }

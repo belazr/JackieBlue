@@ -11,6 +11,7 @@ int main(int argc, const char* argv[]) {
 	std::string dllDir;
 
 	io::init();
+	io::printHeader();
 
 	if (argc < 4) {
 		io::selectTargets(&procName, &dllName, &dllDir);
@@ -26,12 +27,11 @@ int main(int argc, const char* argv[]) {
 
 	while (curAction != io::action::EXIT) {
 		io::printHeader();
-		io::printMenu(procName, dllName, dllDir, curAction);
+		io::printTargetInfo(procName, dllName, dllDir);
+		io::printMainMenu(curAction);
 		io::selectAction(&curAction);
 
 		takeAction(curAction, &procName, &dllName, &dllDir);
-
-		io::clearScreen();
 	}
 
 	return 0;
@@ -71,10 +71,9 @@ static void takeInjectionAction(io::action curAction, const std::string* pProcNa
 	// create thread as default launch method
 	static io::launchMethod curLaunchMethod = io::launchMethod::CREATE_THREAD;
 
-	io::printLaunchMethodMenu(curLaunchMethod);
+	io::printLaunchMethodMenu(curAction, curLaunchMethod);
 	io::selectLaunchMethod(&curLaunchMethod);
-	io::clearLog();
-	io::printLogSeparator();
+	io::initLog();
 
 	const HANDLE hProc = getProcessHandle(pProcName);
 
@@ -204,8 +203,7 @@ static launch::tLaunchFunc getLaunchFunction(HANDLE hProc, io::launchMethod laun
 
 
 static void takeUnlinkAction(const std::string* pProcName, const std::string* pDllName) {
-	io::clearLog();
-	io::printLogSeparator();
+	io::initLog();
 
 	const HANDLE hProc = getProcessHandle(pProcName);
 
