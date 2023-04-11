@@ -36,7 +36,7 @@ namespace io {
 
 	// labels for the launchMethods
 	static const std::unordered_map<launchMethod, std::string> launchMethodLabels{
-		{ launchMethod::CREATE_THREAD, "Create thread via NtCreateThreadEx"},
+		{ launchMethod::CREATE_THREAD, "Create thread"},
 		{ launchMethod::HIJACK_THREAD, "Hijack thread"},
 		{ launchMethod::SET_WINDOWS_HOOK, "Set windows hook"},
 		{ launchMethod::HOOK_BEGIN_PAINT, "Hook NtUserBeginPaint"},
@@ -47,7 +47,7 @@ namespace io {
 
 	// cursor positions relevant for printing static console output
 	static COORD cursorAfterHeader;
-	static COORD cursorAfterTargets;
+	static COORD cursorAfterTargetInfo;
 	static COORD cursorAfterSelect;
 	static COORD cursorAfterLog;
 
@@ -62,6 +62,7 @@ namespace io {
 	static COORD getCursorPosition();
 
 	void printHeader() {
+		SetConsoleCursorPosition(hStdOut, { 0, 0 });
 		std::cout << HEADER << std::endl;
 
 		DWORD written = 0;
@@ -77,22 +78,31 @@ namespace io {
 
 		return;
 	}
-	
 
-	template<typename Enum>
-	static std::string getMenuEntryString(Enum curEntry, const std::unordered_map<Enum, std::string>* pMap, bool isSelected);
+
+	static void clearConsole(COORD from, COORD to);
 	static void printMenuItem(std::string item);
+	
+	void printTargetInfo(std::string procName, std::string dllName, std::string dllDir) {
+		clearConsole(cursorAfterHeader, cursorAfterTargetInfo);
 
-	void printMenu(std::string procName, std::string dllName, std::string dllDir, action curAction) {
-		// print target info section
 		printMenuItem(PROCESS_LABEL + procName);
 		printMenuItem(DLL_LABEL + dllName);
 		printMenuItem(PATH_LABEL + dllDir);
 		std::cout << std::endl;
-		
-		cursorAfterTargets = getCursorPosition();
 
-		// print options section
+		cursorAfterTargetInfo = getCursorPosition();
+
+		return;
+	}
+	
+	
+	template<typename Enum>
+	static std::string getMenuEntryString(Enum curEntry, const std::unordered_map<Enum, std::string>* pMap, bool isSelected);
+
+	void printMainMenu(action curAction) {
+		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
+
 		printMenuItem("Select action:");
 
 		// print all options starting at the first non exit option
@@ -108,14 +118,10 @@ namespace io {
 	}
 
 
-	static void clearConsole(COORD from, COORD to);
-
-	void printLaunchMethodMenu(launchMethod curLaunchMethod) {
-		clearConsole(cursorAfterTargets, cursorAfterSelect);
-		SetConsoleCursorPosition(hStdOut, cursorAfterTargets);
+	void printLaunchMethodMenu(action curAction, launchMethod curLaunchMethod) {
+		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
 		
-		// print options section
-		printMenuItem("Select launch method:");
+		printMenuItem("Select launch method (" + actionLabels.at(curAction) + "):");
 
 		// print all options starting at the first non exit option
 		for (int i = launchMethod::CREATE_THREAD; i < launchMethod::LAUNCH_METHOD_COUNT; i++) {
@@ -123,13 +129,6 @@ namespace io {
 		}
 
 		std::cout << std::endl;
-
-		return;
-	}
-
-
-	void clearScreen() {
-		clearConsole({ 0, 0 }, cursorAfterSelect);
 
 		return;
 	}
@@ -162,22 +161,19 @@ namespace io {
 	static void getTargetInput(std::string info, std::string* pTargetInfo);
 
 	void selectTargets(std::string* pProcName, std::string* pDllName, std::string* pDllDir) {
-		const COORD curCursorPos = getCursorPosition();
-		SetConsoleCursorPosition(hStdOut, cursorAfterHeader);
-		// clears target info section
-		clearConsole(cursorAfterHeader, cursorAfterTargets);
+		clearConsole(cursorAfterHeader, cursorAfterTargetInfo);
 
 		getTargetInput(PROCESS_LABEL, pProcName);
 		getTargetInput(DLL_LABEL, pDllName);
 		getTargetInput(PATH_LABEL, pDllDir);
 
-		SetConsoleCursorPosition(hStdOut, curCursorPos);
-
 		return;
 	}
 
 
-	void printLogSeparator() {
+	void initLog() {
+		clearConsole(cursorAfterSelect, cursorAfterLog);
+
 		std::cout
 			<< LOG_SEP << std::endl
 			<< std::endl;
@@ -264,13 +260,6 @@ namespace io {
 	}
 
 
-	void clearLog() {
-		clearConsole(cursorAfterSelect, cursorAfterLog);
-
-		return;
-	}
-
-
 	static COORD getCursorPosition() {
 		CONSOLE_SCREEN_BUFFER_INFO screen{};
 		GetConsoleScreenBufferInfo(hStdOut, &screen);
@@ -288,7 +277,7 @@ namespace io {
 
 		if (start > end) return;
 
-		DWORD toFill = end - start;
+		DWORD toFill = start < end ? end - start : 0;
 		DWORD written = 0;
 		FillConsoleOutputCharacterA(hStdOut, ' ', toFill, from, &written);
 
