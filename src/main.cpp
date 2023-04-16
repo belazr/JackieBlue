@@ -136,7 +136,7 @@ static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation 
 
 		// common error when trying to access a process run by higher priviliged user
 		if (GetLastError() == ERROR_ACCESS_DENIED) {
-			io::printPlainError("Try running as administrator.");
+			io::printInfo("Try running as administrator.");
 		}
 
 		return nullptr;
@@ -165,8 +165,7 @@ static DWORD searchProcId(const std::string* pProcName) {
 		return 0;
 	}
 
-	io::printInfo("Found target process.");
-	io::printInfo("Process ID: " + std::to_string(procId));
+	io::printInfo("Found target process. Process ID: " + std::to_string(procId));
 
 	return procId;
 }
@@ -221,16 +220,9 @@ static void takeUnlinkAction(io::handleCreation curHandleCreation, const std::st
 
 	if (!hProc) return;
 
-	std::string resultString = "Unlinking of module";
+	const bool success = ldr::unlinkModule(hProc, pDllName->c_str());
 
-	if (ldr::unlinkModule(hProc, pDllName->c_str())) {
-		resultString += " succeeded.";
-		io::printInfo(resultString);
-	}
-	else {
-		resultString += " failed.";
-		io::printPlainError(resultString);
-	}
+	io::printUnlinkResult(success);
 
 	CloseHandle(hProc);
 

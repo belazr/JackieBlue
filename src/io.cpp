@@ -21,6 +21,7 @@
 #define MENU_PREFIX "+ "
 #define ERROR_PREFIX "# "
 #define INFO_PREFIX "> "
+#define SUCCESS_PREFIX "! "
 #define LOG_SEP "------------------------- LOG -------------------------"
 
 namespace io {
@@ -234,31 +235,24 @@ namespace io {
 	}
 
 
+	static void printLogText(std::string msg, const char* prefix, WORD attribute);
+
 	void printPlainError(std::string msg) {
-		COORD start = getCursorPosition();
-
-		std::cout << ERROR_PREFIX << msg;
-
-		COORD end = getCursorPosition();
-
-		// sets the color of the error message to red
-		DWORD written = 0;
-		FillConsoleOutputAttribute(hStdOut, FOREGROUND_RED, end.X - start.X, start, &written);
-
-		std::cout << std::endl;
-
-		// keep track of the cursor position after the logging section
-		cursorAfterLog = getCursorPosition();
+		printLogText(msg, ERROR_PREFIX, FOREGROUND_RED);
 
 		return;
 	}
 
 
 	void printInfo(std::string msg) {
-		std::cout << INFO_PREFIX << msg << std::endl;
+		printLogText(msg, INFO_PREFIX, 0);
 
-		// keep track of the cursor position after the logging section
-		cursorAfterLog = getCursorPosition();
+		return;
+	}
+
+
+	void printSuccess(std::string msg) {
+		printLogText(msg, SUCCESS_PREFIX, FOREGROUND_GREEN);
 
 		return;
 	}
@@ -281,7 +275,23 @@ namespace io {
 		
 		if (success) {
 			resultString += " succeeded.";
-			io::printInfo(resultString);
+			io::printSuccess(resultString);
+		}
+		else {
+			resultString += " failed.";
+			io::printPlainError(resultString);
+		}
+
+		return;
+	}
+
+
+	void printUnlinkResult(bool success) {
+		std::string resultString = "Unlinking of module";
+
+		if (success) {
+			resultString += " succeeded.";
+			io::printSuccess(resultString);
 		}
 		else {
 			resultString += " failed.";
@@ -383,6 +393,27 @@ namespace io {
 
 		SetConsoleCursorPosition(hStdOut, cursorCur);
 		printMenuItem(label + *pTargetInfo);
+
+		return;
+	}
+
+
+	static void printLogText(std::string msg, const char* prefix, WORD attribute) {
+		COORD start = getCursorPosition();
+
+		std::cout << prefix << msg;
+
+		COORD end = getCursorPosition();
+
+		if (attribute) {
+			DWORD written = 0;
+			FillConsoleOutputAttribute(hStdOut, attribute, end.X - start.X, start, &written);
+		}
+		
+		std::cout << std::endl;
+
+		// keep track of the cursor position after the logging section
+		cursorAfterLog = getCursorPosition();
 
 		return;
 	}
