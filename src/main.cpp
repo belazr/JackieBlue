@@ -3,6 +3,8 @@
 #include "loadLibraryA.h"
 #include "unlinkDll.h"
 
+#define PROCESS_REQUIRED_ACCESS (PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_CREATE_THREAD)
+
 static void takeInjectionAction(io::action curAction, io::launchMethod curLaunchMethod, io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
 static void takeUnlinkAction(io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName);
 
@@ -120,10 +122,10 @@ static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation 
 	HANDLE hProc = nullptr;
 	switch (curHandleCreation) {
 	case io::OPEN_PROCESS:
-		hProc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procId);
+		hProc = OpenProcess(PROCESS_REQUIRED_ACCESS, FALSE, procId);
 		break;
 	case io::DUPLICATE_HANDLE:
-		hProc = proc::getDuplicateProcessHandle(PROCESS_ALL_ACCESS, procId);
+		hProc = proc::getDuplicateProcessHandle(PROCESS_REQUIRED_ACCESS, FALSE, procId);
 		break;
 	default:
 		break;
