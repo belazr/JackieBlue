@@ -9,7 +9,7 @@ namespace loadLib {
 	// 
 	// [in] hProc:
 	// Handle to the target process.
-	// Needs at least PROCESS_CREATE_THREAD, PROCESS_QUERY_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_WRITE, and PROCESS_VM_READ access rights.
+	// Needs at least PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_WRITE, PROCESS_VM_READ access rights and the additional access rights required by the launch function.
 	// 
 	// [in] dllPath:
 	// Path of the DLL file to inject.
