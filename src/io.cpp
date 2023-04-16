@@ -25,7 +25,7 @@
 
 namespace io {
 
-	// labels for the actions
+	// labels for actions
 	static const std::unordered_map<action, std::string> actionLabels{
 		{ action::LOAD_LIB, "LoadLibraryA injection"},
 		{ action::MAN_MAP, "Manual mapping"},
@@ -34,13 +34,19 @@ namespace io {
 		{ action::EXIT, "Exit"}
 	};
 
-	// labels for the launchMethods
+	// labels for launchMethods
 	static const std::unordered_map<launchMethod, std::string> launchMethodLabels{
 		{ launchMethod::CREATE_THREAD, "Create thread"},
 		{ launchMethod::HIJACK_THREAD, "Hijack thread"},
 		{ launchMethod::SET_WINDOWS_HOOK, "Set windows hook"},
 		{ launchMethod::HOOK_BEGIN_PAINT, "Hook NtUserBeginPaint"},
 		{ launchMethod::QUEUE_USER_APC, "Queue user APC"}
+	};
+
+	// labels for handleCreations
+	static const std::unordered_map<handleCreation, std::string> handleCreationLabels{
+		{ handleCreation::OPEN_PROCESS, "Call OpenProcess"},
+		{ handleCreation::DUPLICATE_HANDLE, "Duplicate handle"}
 	};
 
 	static HANDLE hStdOut;
@@ -118,12 +124,26 @@ namespace io {
 	}
 
 
+	void printHandleCreationMenu(action curAction, handleCreation curHandleCreation) {
+		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
+
+		printMenuItem("Select handle creation (" + actionLabels.at(curAction) + "):");
+
+		for (int i = handleCreation::OPEN_PROCESS; i < handleCreation::MAX_HANDLE_CREATION; i++) {
+			printMenuItem(getMenuEntryString(static_cast<handleCreation>(i), &handleCreationLabels, i == curHandleCreation));
+		}
+
+		std::cout << std::endl;
+
+		return;
+	}
+
+
 	void printLaunchMethodMenu(action curAction, launchMethod curLaunchMethod) {
 		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
-		
+
 		printMenuItem("Select launch method (" + actionLabels.at(curAction) + "):");
 
-		// print all options starting at the first non exit option
 		for (int i = launchMethod::CREATE_THREAD; i < launchMethod::MAX_LAUNCH_METHOD; i++) {
 			printMenuItem(getMenuEntryString(static_cast<launchMethod>(i), &launchMethodLabels, i == curLaunchMethod));
 		}
@@ -142,6 +162,17 @@ namespace io {
 		if (input < 0 || input >= action::MAX_ACTION) return;
 
 		*pAction = static_cast<action>(input);
+
+		return;
+	}
+
+
+	void selectHandleCreation(handleCreation* pHandleCreation) {
+		const int input = getIntInput();
+
+		if (input < 0 || input >= handleCreation::MAX_HANDLE_CREATION) return;
+
+		*pHandleCreation = static_cast<handleCreation>(input);
 
 		return;
 	}
@@ -173,6 +204,7 @@ namespace io {
 
 	void initLog() {
 		clearConsole(cursorAfterSelect, cursorAfterLog);
+		SetConsoleCursorPosition(hStdOut, cursorAfterSelect);
 
 		std::cout
 			<< LOG_SEP << std::endl
@@ -315,7 +347,11 @@ namespace io {
 		std::getline(std::cin, strInput);
 		std::cout << std::endl;
 
-		cursorAfterSelect = getCursorPosition();
+		const COORD cursorCur = getCursorPosition();
+
+		if (cursorCur.Y > cursorAfterSelect.Y) {
+			cursorAfterSelect = cursorCur;
+		}
 
 		// if input is empty or not a number return without setting new selected action
 		if (strInput == "" || strInput.find_first_not_of("1234567890") != std::string::npos) {
@@ -328,12 +364,12 @@ namespace io {
 
 	
 	static void getTargetInput(std::string label, std::string* pTargetInfo) {
-		COORD cursorCurrent = getCursorPosition();
+		COORD cursorCur = getCursorPosition();
 
 		// gets the targer input from user input until set
 		// keeps value if already set and user input is empty
 		do {
-			SetConsoleCursorPosition(hStdOut, cursorCurrent);
+			SetConsoleCursorPosition(hStdOut, cursorCur);
 
 			std::string input;
 			std::cout << MENU_PREFIX << label;
@@ -345,7 +381,7 @@ namespace io {
 			}
 		} while (pTargetInfo->empty());
 
-		SetConsoleCursorPosition(hStdOut, cursorCurrent);
+		SetConsoleCursorPosition(hStdOut, cursorCur);
 		printMenuItem(label + *pTargetInfo);
 
 		return;
