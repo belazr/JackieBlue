@@ -106,7 +106,7 @@ namespace io {
 		printMenuItem("Select action:");
 
 		// print all options starting at the first non exit option
-		for (int i = action::EXIT + 1; i < action::ACTION_COUNT; i++) {
+		for (int i = action::EXIT + 1; i < action::MAX_ACTION; i++) {
 			printMenuItem(getMenuEntryString(static_cast<action>(i), &actionLabels, i == curAction));
 		}
 
@@ -124,7 +124,7 @@ namespace io {
 		printMenuItem("Select launch method (" + actionLabels.at(curAction) + "):");
 
 		// print all options starting at the first non exit option
-		for (int i = launchMethod::CREATE_THREAD; i < launchMethod::LAUNCH_METHOD_COUNT; i++) {
+		for (int i = launchMethod::CREATE_THREAD; i < launchMethod::MAX_LAUNCH_METHOD; i++) {
 			printMenuItem(getMenuEntryString(static_cast<launchMethod>(i), &launchMethodLabels, i == curLaunchMethod));
 		}
 
@@ -139,7 +139,7 @@ namespace io {
 	void selectAction(action* pAction) {
 		const int input = getIntInput();
 
-		if (input < 0 || input >= action::ACTION_COUNT) return;
+		if (input < 0 || input >= action::MAX_ACTION) return;
 
 		*pAction = static_cast<action>(input);
 
@@ -150,7 +150,7 @@ namespace io {
 	void selectLaunchMethod(launchMethod* pLaunchMethod) {
 		const int input = getIntInput();
 
-		if (input < 0 || input >= launchMethod::LAUNCH_METHOD_COUNT) return;
+		if (input < 0 || input >= launchMethod::MAX_LAUNCH_METHOD) return;
 
 		*pLaunchMethod = static_cast<launchMethod>(input);
 

@@ -8,8 +8,8 @@
 namespace io {
 
 	// All possible actions that can be selected by the user.
-	enum action { EXIT = 0, LOAD_LIB, MAN_MAP, UNLINK, CHANGE_TARGETS, ACTION_COUNT };
-	enum launchMethod { CREATE_THREAD = 1, HIJACK_THREAD, SET_WINDOWS_HOOK, HOOK_BEGIN_PAINT, QUEUE_USER_APC, LAUNCH_METHOD_COUNT };
+	enum action { EXIT = 0, LOAD_LIB, MAN_MAP, UNLINK, CHANGE_TARGETS, MAX_ACTION };
+	enum launchMethod { CREATE_THREAD = 1, HIJACK_THREAD, SET_WINDOWS_HOOK, HOOK_BEGIN_PAINT, QUEUE_USER_APC, MAX_LAUNCH_METHOD };
 
 	// Sets the console output handle to std out.
 	void init();
