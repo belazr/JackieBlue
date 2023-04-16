@@ -140,18 +140,36 @@ namespace io {
 	// Info message to be printed.
 	void printInfo(std::string msg);
 
+	// Prints a success message in green to the logging section.
+	// 
+	// Parameters:
+	// 
+	// [in] msg:
+	// Success message to be printed.
+	void printSuccess(std::string msg);
 
-	// Prints the result message for an action.
+
+	// Prints the result message for an injection action.
 	// 
 	// Parameters:
 	//
 	// [in] curAction:
-	// The executed action
+	// The executed injection action.
 	// [in] curLaunchMethod:
-	// The launch method used for the action if applicable.
+	// The launch method used for the injection.
+	// [in]
+	// Indicates wether the injection was successful.
 	void printInjectionResult(action curAction, launchMethod curLaunchMethod, bool success);
 
-	
+
+	// Prints the result message for an unliking action.
+	// 
+	// Parameters:
+	//
+	// [in]
+	// Indicates wether the unlinking was successful.
+	void printUnlinkResult(bool success);
+
 	// Formats a pointer to a string with format 0xXXXXXXXX...
 	//
 	// Parameters:
