@@ -7,9 +7,10 @@
 
 namespace io {
 
-	// All possible actions that can be selected by the user.
+	// options for user selection
 	enum action { EXIT = 0, LOAD_LIB, MAN_MAP, UNLINK, CHANGE_TARGETS, MAX_ACTION };
 	enum launchMethod { CREATE_THREAD = 1, HIJACK_THREAD, SET_WINDOWS_HOOK, HOOK_BEGIN_PAINT, QUEUE_USER_APC, MAX_LAUNCH_METHOD };
+	enum handleCreation { OPEN_PROCESS = 1, DUPLICATE_HANDLE, MAX_HANDLE_CREATION };
 
 	// Sets the console output handle to std out.
 	void init();
@@ -40,6 +41,17 @@ namespace io {
 	// Action currently selected. Number is printed in brackets: " [2] label".
 	void printMainMenu(action action);
 
+	// Prints the sub menu to select the handle creation.
+	// 
+	// Parameters:
+	// 
+	// [in] curAction:
+	// Action currently selected.
+	// 
+	// [in] curHandleCreation:
+	// Handle creation currently selected. Number is printed in brackets: " [2] label".
+	void printHandleCreationMenu(action curAction, handleCreation curHandleCreation);
+
 	// Prints the sub menu to select the launch method.
 	// 
 	// Parameters:
@@ -51,13 +63,21 @@ namespace io {
 	// Launch method currently selected. Number is printed in brackets: " [2] label".
 	void printLaunchMethodMenu(action curAction, launchMethod curLaunchMethod);
 
-	// Lets the user select an action to be executed.
+	// Lets the user select the action to be executed.
 	// 
 	// Parameters:
 	// 
 	// [in/out] pAction:
 	// Action currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
 	void selectAction(action* pAction);
+
+	// Lets the user select the handle creation.
+	// 
+	// Parameters:
+	// 
+	// [in/out] pHandleCreation:
+	// Handle creation currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
+	void selectHandleCreation(handleCreation* pHandleCreation);
 
 	// Lets the user select the launch method of the code to execute the injection.
 	// 

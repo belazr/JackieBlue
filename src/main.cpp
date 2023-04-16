@@ -37,25 +37,20 @@ int main(int argc, const char* argv[]) {
 	return 0;
 }
 
-
-static void takeInjectionAction(io::action curAction, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
-static void takeUnlinkAction(const std::string* pProcName, const std::string* pDllName);
+static void takeProcessAction(io::action curAction, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
 
 static void takeAction(io::action curAction, std::string* pProcName, std::string* pDllName, std::string* pDllDir) {
 
 	switch (curAction) {
 	case io::action::LOAD_LIB:
 	case io::action::MAN_MAP:
-		takeInjectionAction(curAction, pProcName, pDllName, pDllDir);
-		break;
 	case io::action::UNLINK:
-		takeUnlinkAction(pProcName, pDllName);
+		takeProcessAction(curAction, pProcName, pDllName, pDllDir);
 		break;
 	case io::action::CHANGE_TARGETS:
 		io::selectTargets(pProcName, pDllName, pDllDir);
 		break;
 	case io::action::EXIT:
-		break;
 	default:
 		break;
 	}
@@ -64,27 +59,61 @@ static void takeAction(io::action curAction, std::string* pProcName, std::string
 }
 
 
-static HANDLE getProcessHandle(const std::string* pProcName);
-static launch::tLaunchFunc getLaunchFunction(HANDLE hProc, io::launchMethod launchMethod);
+static void takeInjectionAction(io::action curAction, io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
+static void takeUnlinkAction(io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName);
 
-static void takeInjectionAction(io::action curAction, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir) {
+static void takeProcessAction(io::action curAction, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir) {
+	// Open process as default handle creation
+	static io::handleCreation curHandleCreation = io::handleCreation::OPEN_PROCESS;
+
+	io::printHandleCreationMenu(curAction, curHandleCreation);
+	io::selectHandleCreation(&curHandleCreation);
+
+	switch (curAction) {
+	case io::action::LOAD_LIB:
+	case io::action::MAN_MAP:
+		takeInjectionAction(curAction, curHandleCreation, pProcName, pDllName, pDllDir);
+		break;
+	case io::action::UNLINK:
+		takeUnlinkAction(curHandleCreation, pProcName, pDllName);
+		break;
+	default:
+		break;
+	}
+
+	return;
+}
+
+
+static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation curHandleCreation);
+static launch::tLaunchFunc getLaunchFunction(io::launchMethod launchMethod, BOOL isWow64);
+
+static void takeInjectionAction(io::action curAction, io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir) {
 	// create thread as default launch method
 	static io::launchMethod curLaunchMethod = io::launchMethod::CREATE_THREAD;
 
 	io::printLaunchMethodMenu(curAction, curLaunchMethod);
 	io::selectLaunchMethod(&curLaunchMethod);
+	
 	io::initLog();
 
-	const HANDLE hProc = getProcessHandle(pProcName);
+	const HANDLE hProc = getProcessHandle(pProcName, curHandleCreation);
 
 	if (!hProc) return;
 
+	BOOL isWow64 = FALSE;
+	IsWow64Process(hProc, &isWow64);
+
+	const launch::tLaunchFunc pLaunchFunc = getLaunchFunction(curLaunchMethod, isWow64);
+
+	if (!pLaunchFunc) {
+		CloseHandle(hProc);
+
+		return;
+	}
+
 	const std::string dllFullPath = (*pDllDir + "\\" + *pDllName);
 	bool success = false;
-
-	const launch::tLaunchFunc pLaunchFunc = getLaunchFunction(hProc, curLaunchMethod);
-
-	if (!pLaunchFunc) return;
 
 	switch (curAction) {
 	case io::action::LOAD_LIB:
@@ -107,12 +136,22 @@ static void takeInjectionAction(io::action curAction, const std::string* pProcNa
 
 static DWORD searchProcId(const std::string* pProcName);
 
-static HANDLE getProcessHandle(const std::string* pProcName) {
+static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation curHandleCreation) {
 	const DWORD procId = searchProcId(pProcName);
 
 	if (!procId) return nullptr;
 
-	HANDLE hProc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procId);
+	HANDLE hProc = nullptr;
+	switch (curHandleCreation) {
+	case io::OPEN_PROCESS:
+		hProc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, procId);
+		break;
+	case io::DUPLICATE_HANDLE:
+		hProc = proc::getDuplicateProcessHandle(PROCESS_ALL_ACCESS, procId);
+		break;
+	default:
+		break;
+	}
 
 	if (!hProc || hProc == INVALID_HANDLE_VALUE) {
 		io::printWinError("Failed to get process handle.");
@@ -155,10 +194,7 @@ static DWORD searchProcId(const std::string* pProcName) {
 }
 
 
-static launch::tLaunchFunc getLaunchFunction(HANDLE hProc, io::launchMethod launchMethod) {
-	BOOL isWow64 = FALSE;
-	IsWow64Process(hProc, &isWow64);
-	
+static launch::tLaunchFunc getLaunchFunction(io::launchMethod launchMethod, BOOL isWow64) {
 	launch::tLaunchFunc pLaunchFunc = nullptr;
 
 	switch (launchMethod) {
@@ -202,10 +238,10 @@ static launch::tLaunchFunc getLaunchFunction(HANDLE hProc, io::launchMethod laun
 }
 
 
-static void takeUnlinkAction(const std::string* pProcName, const std::string* pDllName) {
+static void takeUnlinkAction(io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName) {
 	io::initLog();
 
-	const HANDLE hProc = getProcessHandle(pProcName);
+	const HANDLE hProc = getProcessHandle(pProcName, curHandleCreation);
 
 	if (!hProc) return;
 
