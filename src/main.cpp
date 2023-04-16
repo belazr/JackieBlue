@@ -3,7 +3,8 @@
 #include "loadLibraryA.h"
 #include "unlinkDll.h"
 
-static void takeAction(io::action select, std::string* pProcName, std::string* pDllName, std::string* pDllDir);
+static void takeInjectionAction(io::action curAction, io::launchMethod curLaunchMethod, io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
+static void takeUnlinkAction(io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName);
 
 int main(int argc, const char* argv[]) {
 	std::string procName;
@@ -22,8 +23,10 @@ int main(int argc, const char* argv[]) {
 		dllDir = argv[3];
 	}
 
-	// LoadLibrary injection as default
+	// defaults
 	io::action curAction = io::action::LOAD_LIB;
+	io::handleCreation curHandleCreation = io::handleCreation::OPEN_PROCESS;
+	io::launchMethod curLaunchMethod = io::launchMethod::CREATE_THREAD;
 
 	while (curAction != io::action::EXIT) {
 		io::printHeader();
@@ -31,72 +34,45 @@ int main(int argc, const char* argv[]) {
 		io::printMainMenu(curAction);
 		io::selectAction(&curAction);
 
-		takeAction(curAction, &procName, &dllName, &dllDir);
+		switch (curAction) {
+		case io::action::LOAD_LIB:
+		case io::action::MAN_MAP:
+			io::printLaunchMethodMenu(curAction, curLaunchMethod);
+			io::selectLaunchMethod(&curLaunchMethod);
+		case io::action::UNLINK:
+			io::printHandleCreationMenu(curAction, curHandleCreation);
+			io::selectHandleCreation(&curHandleCreation);
+			io::initLog();
+			break;
+		case io::action::CHANGE_TARGETS:
+			io::selectTargets(&procName, &dllName, &dllDir);
+			break;
+		default:
+			break;
+		}
+
+		switch (curAction) {
+		case io::action::LOAD_LIB:
+		case io::action::MAN_MAP:
+			takeInjectionAction(curAction, curLaunchMethod, curHandleCreation, &procName, &dllName, &dllDir);
+			break;
+		case io::action::UNLINK:
+			takeUnlinkAction(curHandleCreation, &procName, &dllName);
+			break;
+		default:
+			break;
+		}
+
 	}
 
 	return 0;
-}
-
-static void takeProcessAction(io::action curAction, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
-
-static void takeAction(io::action curAction, std::string* pProcName, std::string* pDllName, std::string* pDllDir) {
-
-	switch (curAction) {
-	case io::action::LOAD_LIB:
-	case io::action::MAN_MAP:
-	case io::action::UNLINK:
-		takeProcessAction(curAction, pProcName, pDllName, pDllDir);
-		break;
-	case io::action::CHANGE_TARGETS:
-		io::selectTargets(pProcName, pDllName, pDllDir);
-		break;
-	case io::action::EXIT:
-	default:
-		break;
-	}
-	
-	return;
-}
-
-
-static void takeInjectionAction(io::action curAction, io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
-static void takeUnlinkAction(io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName);
-
-static void takeProcessAction(io::action curAction, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir) {
-	// Open process as default handle creation
-	static io::handleCreation curHandleCreation = io::handleCreation::OPEN_PROCESS;
-
-	io::printHandleCreationMenu(curAction, curHandleCreation);
-	io::selectHandleCreation(&curHandleCreation);
-
-	switch (curAction) {
-	case io::action::LOAD_LIB:
-	case io::action::MAN_MAP:
-		takeInjectionAction(curAction, curHandleCreation, pProcName, pDllName, pDllDir);
-		break;
-	case io::action::UNLINK:
-		takeUnlinkAction(curHandleCreation, pProcName, pDllName);
-		break;
-	default:
-		break;
-	}
-
-	return;
 }
 
 
 static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation curHandleCreation);
 static launch::tLaunchFunc getLaunchFunction(io::launchMethod launchMethod, BOOL isWow64);
 
-static void takeInjectionAction(io::action curAction, io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir) {
-	// create thread as default launch method
-	static io::launchMethod curLaunchMethod = io::launchMethod::CREATE_THREAD;
-
-	io::printLaunchMethodMenu(curAction, curLaunchMethod);
-	io::selectLaunchMethod(&curLaunchMethod);
-	
-	io::initLog();
-
+static void takeInjectionAction(io::action curAction, io::launchMethod curLaunchMethod, io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir) {
 	const HANDLE hProc = getProcessHandle(pProcName, curHandleCreation);
 
 	if (!hProc) return;
@@ -239,8 +215,6 @@ static launch::tLaunchFunc getLaunchFunction(io::launchMethod launchMethod, BOOL
 
 
 static void takeUnlinkAction(io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName) {
-	io::initLog();
-
 	const HANDLE hProc = getProcessHandle(pProcName, curHandleCreation);
 
 	if (!hProc) return;
