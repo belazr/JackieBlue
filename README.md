@@ -12,9 +12,17 @@ and the following methods to launch the injection code in the target process:
 - Hook NtUserBeginPaint
 - Queue user APC
 
+For further details regarding the launch methods see the included header files of the EasyWinHax library.
+
+
 It is also able to unlink a module entry from a processes loader data table, so it is harder to detect the injected DLL when using LoadLibrary injections.
 For manual mapping no loader data table entry is created anyway.
-For further details regarding the launch methods see the included header files of the EasyWinHax library.
+
+
+Further it is able to duplicate a handle to the target process from another process instead of creating a new process handle.
+This option is available for both injection methods and module unlinking.
+
+
 The x64 binary is able to handle x86 as well as x64 targets.
 This project was created for personal use, learning purposes and fun.
 # Screenshot
@@ -34,7 +42,6 @@ Build tested with:
 - Windows 11 SDK (10.0.22621)
 
 Usage tested with:
-- Windows 10 64bit
 - Windows 11 64bit
 
 ## Build
@@ -54,6 +61,9 @@ Select a launch method by entering the item number from the menu. Press enter.
 If no number is entered the launch method marked in brackets is selected.
 "Set windows hook" and "Hook NtUserBeginPaint" will not work on console applications.
 "Set windows hook" will only work if injector and target process architectures match.
+Finally the menu to select how to create a handle to the target process is shown.
+Select a creation method by entering the item number from the menu. Press enter.
+Now the selected action is performed and the status is displayed in the logging section.
 
 The binary can also be launched from the command line setting the target, DLL and path like this:
 
