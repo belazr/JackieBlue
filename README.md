@@ -2,7 +2,7 @@
 JackieBlue is a basic DLL injector made with the EasyWinHax library.
 
 It supports the injection methods:
-- LoadLibrary
+- LoadLibraryA
 - Manual mapping via shell code
 
 and the following methods to launch the injection code in the target process:
@@ -14,16 +14,14 @@ and the following methods to launch the injection code in the target process:
 
 For further details regarding the launch methods see the included header files of the EasyWinHax library.
 
-
 It is also able to unlink a module entry from a processes loader data table, so it is harder to detect the injected DLL when using LoadLibrary injections.
 For manual mapping no loader data table entry is created anyway.
-
 
 Further it is able to duplicate a handle to the target process from another process instead of creating a new process handle.
 This option is available for both injection methods and module unlinking.
 
-
 The x64 binary is able to handle x86 as well as x64 targets.
+
 This project was created for personal use, learning purposes and fun.
 # Screenshot
 ![alt text](https://github.com/belazr/JackieBlue/blob/master/res/screenshot.png?raw=true)
@@ -61,19 +59,20 @@ Select a launch method by entering the item number from the menu. Press enter.
 If no number is entered the launch method marked in brackets is selected.
 "Set windows hook" and "Hook NtUserBeginPaint" will not work on console applications.
 "Set windows hook" will only work if injector and target process architectures match.
+
 Finally the menu to select how to create a handle to the target process is shown.
 Select a creation method by entering the item number from the menu. Press enter.
 Now the selected action is performed and the status is displayed in the logging section.
 
 The binary can also be launched from the command line setting the target, DLL and path like this:
 
-"JackieBlue.exe process.exe payload.dll c:\path"
-
-An icon for a shortcut is located in the "res" folder.
+```
+JackieBlue.exe process.exe payload.dll c:\path
+```
 
 ## Known issues
 Resizing the console window to a width smaller than the header breaks the menu.
-Restart is required for proper display.
+Restarting the program is required for proper display.
 
 ## TODOs
 - Add more injection methods
