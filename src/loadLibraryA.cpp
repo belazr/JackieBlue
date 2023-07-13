@@ -3,7 +3,7 @@
 
 namespace loadLib {
 	
-	bool inject(HANDLE hProc, const char* dllPath, launch::tLaunchFunc pLaunchFunc) {
+	bool inject(HANDLE hProc, const char* dllPath, hax::launch::tLaunchFunc pLaunchFunc) {
 		BOOL isWow64 = FALSE;
 		IsWow64Process(hProc, &isWow64);
 		
@@ -32,9 +32,9 @@ namespace loadLib {
 		}
 
 		BYTE* const pDllBytes = dllLoader.getBytes();
-		proc::PeHeaders headers{};
+		hax::proc::PeHeaders headers{};
 
-		if (!proc::in::getPeHeaders(reinterpret_cast<HMODULE>(pDllBytes), &headers)) {
+		if (!hax::proc::in::getPeHeaders(reinterpret_cast<HMODULE>(pDllBytes), &headers)) {
 			io::printPlainError("File format is not PE.");
 
 			return false;
@@ -62,7 +62,7 @@ namespace loadLib {
 			return false;
 		}
 
-		const HMODULE hKernel32 = proc::ex::getModuleHandle(hProc, "kernel32.dll");
+		const HMODULE hKernel32 = hax::proc::ex::getModuleHandle(hProc, "kernel32.dll");
 		
 		if (!hKernel32) {
 			io::printWinError("Failed to retrieve kernel32.dll module handle from target process.");
@@ -71,7 +71,7 @@ namespace loadLib {
 			return false;
 		}
 
-		const FARPROC _LoadLibraryA = proc::ex::getProcAddress(hProc, hKernel32, "LoadLibraryA");
+		const FARPROC _LoadLibraryA = hax::proc::ex::getProcAddress(hProc, hKernel32, "LoadLibraryA");
 		
 		if (!_LoadLibraryA) {
 			io::printWinError("Failed to retrieve LoadLibraryA address from target process.");
@@ -82,7 +82,7 @@ namespace loadLib {
 
 		uintptr_t pModBase = 0;
 
-		if (!pLaunchFunc(hProc, reinterpret_cast<launch::tLaunchableFunc>(_LoadLibraryA), pDllPath, &pModBase)) {
+		if (!pLaunchFunc(hProc, reinterpret_cast<hax::launch::tLaunchableFunc>(_LoadLibraryA), pDllPath, &pModBase)) {
 			io::printWinError("Failed to launch code execution in target process.");
 			VirtualFreeEx(hProc, pDllPath, 0, MEM_RELEASE);
 			

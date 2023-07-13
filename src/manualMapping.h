@@ -21,6 +21,6 @@ namespace manMap {
 	// 
 	// Return:
 	// True on success, false on failure
-	bool inject(HANDLE hProc, const char* dllPath, launch::tLaunchFunc pLaunchFunc);
+	bool inject(HANDLE hProc, const char* dllPath, hax::launch::tLaunchFunc pLaunchFunc);
 
 }
