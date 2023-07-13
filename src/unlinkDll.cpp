@@ -12,7 +12,7 @@ namespace ldr {
         IsWow64Process(hProc, &isWow64);
 
         if (isWow64) {
-            const LDR_DATA_TABLE_ENTRY32* const pLdrEntry32 = proc::ex::getLdrDataTableEntry32Address(hProc, dllName);
+            const LDR_DATA_TABLE_ENTRY32* const pLdrEntry32 = hax::proc::ex::getLdrDataTableEntry32Address(hProc, dllName);
 
             return unlinkLdrEntry(hProc, pLdrEntry32);
         }
@@ -20,7 +20,7 @@ namespace ldr {
 
             #ifdef _WIN64
 
-            const LDR_DATA_TABLE_ENTRY64* const pLdrEntry64 = proc::ex::getLdrDataTableEntry64Address(hProc, dllName);
+            const LDR_DATA_TABLE_ENTRY64* const pLdrEntry64 = hax::proc::ex::getLdrDataTableEntry64Address(hProc, dllName);
 
             return unlinkLdrEntry(hProc, pLdrEntry64);
 
@@ -58,19 +58,19 @@ namespace ldr {
             return false;
         }
 
-        if (!mem::ex::unlinkListEntry(hProc, ldrEntry.InMemoryOrderLinks)) {
+        if (!hax::mem::ex::unlinkListEntry(hProc, ldrEntry.InMemoryOrderLinks)) {
             io::printPlainError("Could not unlink InMemoryOrder links.");
             
             return false;
         }
 
-        if (!mem::ex::unlinkListEntry(hProc, ldrEntry.InLoadOrderLinks)) {
+        if (!hax::mem::ex::unlinkListEntry(hProc, ldrEntry.InLoadOrderLinks)) {
             io::printPlainError("Could not unlink InLoadOrder links.");
 
             return false;
         }
 
-        if (!mem::ex::unlinkListEntry(hProc, ldrEntry.InInitializationOrderLinks)) {
+        if (!hax::mem::ex::unlinkListEntry(hProc, ldrEntry.InInitializationOrderLinks)) {
             io::printPlainError("Could not unlink InInitializationOrder links.");
 
             return false;

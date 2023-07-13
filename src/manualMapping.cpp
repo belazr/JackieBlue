@@ -6,7 +6,7 @@ namespace manMap {
 	static bool writeMappedDll(HANDLE hProc, BYTE* pImageBase, const IMAGE_NT_HEADERS* pNtHeaders, BYTE* pDllBytes, BOOL isWow64);
 	static BYTE* writeShellCode(HANDLE hProc, BOOL isWow64);
 
-	bool inject(HANDLE hProc, const char* dllPath, launch::tLaunchFunc pLaunchFunc) {
+	bool inject(HANDLE hProc, const char* dllPath, hax::launch::tLaunchFunc pLaunchFunc) {
 		BOOL isWow64 = FALSE;
 		IsWow64Process(hProc, &isWow64);
 		
@@ -35,9 +35,9 @@ namespace manMap {
 		}
 
 		BYTE* const pDllBytes = dllLoader.getBytes();
-		proc::PeHeaders headers{};
+		hax::proc::PeHeaders headers{};
 		
-		if (!proc::in::getPeHeaders(reinterpret_cast<HMODULE>(pDllBytes), &headers)) {
+		if (!hax::proc::in::getPeHeaders(reinterpret_cast<HMODULE>(pDllBytes), &headers)) {
 			io::printPlainError("File format is not PE.");
 			
 			return false;
@@ -102,7 +102,7 @@ namespace manMap {
 		uintptr_t pModBase = 0;
 
 		// parameters were written to the dll image base because the pe header of the dll is not needed anyway
-		if (!pLaunchFunc(hProc, reinterpret_cast<launch::tLaunchableFunc>(pShellCode), pImageBase, &pModBase)) {
+		if (!pLaunchFunc(hProc, reinterpret_cast<hax::launch::tLaunchableFunc>(pShellCode), pImageBase, &pModBase)) {
 			io::printWinError("Failed to launch code execution in target process.");
 			VirtualFreeEx(hProc, pImageBase, 0, MEM_RELEASE);
 			VirtualFreeEx(hProc, pShellCode, 0, MEM_RELEASE);
@@ -162,7 +162,7 @@ namespace manMap {
 
 
 	static bool getManMapFuncs(HANDLE hProc, ManMapFuncs* pManMapFuncs) {
-		HMODULE hKernel32 = proc::ex::getModuleHandle(hProc, "kernel32.dll");
+		HMODULE hKernel32 = hax::proc::ex::getModuleHandle(hProc, "kernel32.dll");
 		
 		if (!hKernel32) {
 			io::printPlainError("Failed to retrieve kernel32.dll module handle from target process.");
@@ -170,7 +170,7 @@ namespace manMap {
 			return false;
 		}
 
-		pManMapFuncs->pLoadLibraryA = reinterpret_cast<tLoadLibraryA>(proc::ex::getProcAddress(hProc, hKernel32, "LoadLibraryA"));
+		pManMapFuncs->pLoadLibraryA = reinterpret_cast<tLoadLibraryA>(hax::proc::ex::getProcAddress(hProc, hKernel32, "LoadLibraryA"));
 
 		if (!pManMapFuncs->pLoadLibraryA) {
 			io::printPlainError("Failed to retrieve LoadLibraryA address from target process.");
@@ -178,7 +178,7 @@ namespace manMap {
 			return false;
 		}
 
-		pManMapFuncs->pGetProcAddress = reinterpret_cast<tGetProcAddress>(proc::ex::getProcAddress(hProc, hKernel32, "GetProcAddress"));
+		pManMapFuncs->pGetProcAddress = reinterpret_cast<tGetProcAddress>(hax::proc::ex::getProcAddress(hProc, hKernel32, "GetProcAddress"));
 
 		if (!pManMapFuncs->pGetProcAddress) {
 			io::printPlainError("Failed to retrieve GetProcAddress address from target process.");
