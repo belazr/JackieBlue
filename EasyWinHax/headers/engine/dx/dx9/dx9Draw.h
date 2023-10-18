@@ -1,5 +1,6 @@
 #pragma once
-#include "..\font\dxFont.h"
+#include "dx9Vertex.h"
+#include "..\font\dxFonts.h"
 #include "..\..\IDraw.h"
 #include <d3d9.h>
 
@@ -27,14 +28,25 @@ namespace hax {
 		// True on success, false on failure.
 		bool getD3D9DeviceVTable(void** pDeviceVTable, size_t size);
 
+		typedef struct VertexBufferData {
+			IDirect3DVertexBuffer9* pBuffer;
+			Vertex* pLocalBuffer;
+			UINT size;
+			UINT curOffset;
+		}VertexBufferData;
 
 		class Draw : public IDraw {
 		private:
 			IDirect3DDevice9* _pDevice;
+			VertexBufferData _pointListBufferData;
+			VertexBufferData _triangleListBufferData;
+
 			bool _isInit;
 
 		public:
 			Draw();
+
+			~Draw();
 
 			// Initializes drawing within a hook. Should be called by an Engine object.
 			//
@@ -48,28 +60,29 @@ namespace hax {
 			// 
 			// [in] pEngine:
 			// Pointer to the Engine object responsible for drawing within the hook.
-			void endDraw(const Engine* pEngine) const override;
+			void endDraw(const Engine* pEngine) override;
 
-			// Draws a filled triangle strip. Should be called by an Engine object.
+			// Draws a filled triangle list. Should be called by an Engine object.
 			// 
 			// Parameters:
 			// 
 			// [in] corners:
-			// Screen coordinates of the corners of the triangle strip.
+			// Screen coordinates of the corners of the triangles in the list.
+			// The three corners of the first triangle have to be in clockwise order. For there on the orientation of the triangles has to alternate.
 			// 
 			// [in] count:
-			// Count of the corners of the triangle strip.
+			// Count of the corners of the triangles in the list. Has to be divisble by three.
 			// 
 			// [in]
-			// Color of the triangle strip.
-			void drawTriangleStrip(const Vector2 corners[], UINT count, rgb::Color color) const override;
+			// Color of the triangle list.
+			void drawTriangleList(const Vector2 corners[], UINT count, rgb::Color color) override;
 
 			// Draws text to the screen. Should be called by an Engine object.
 			//
 			// Parameters:
 			// 
 			// [in] pFont:
-			// Pointer to a dx::Font<dx11::Vertex> object.
+			// Pointer to a dx::Font object.
 			//
 			// [in] origin:
 			// Coordinates of the bottom left corner of the first character of the text.
@@ -79,10 +92,14 @@ namespace hax {
 			//
 			// [in] color:
 			// Color of the text.
-			void drawString(void* pFont, const Vector2* pos, const char* text, rgb::Color color) const override;
+			void drawString(const void* pFont, const Vector2* pos, const char* text, rgb::Color color) override;
 			
 		private:
-			void drawFontchar(dx::Font<Vertex>* pDx9Font, const dx::Fontchar* pChar, const Vector2* pos, size_t index, rgb::Color color) const;
+			void copyToVertexBuffer(VertexBufferData* pVertexBufferData, const Vector2 data[], UINT count, rgb::Color color, Vector2 offset = { 0.f, 0.f }) const;
+			bool resizeVertexBuffer(VertexBufferData* pVertexBufferData, UINT newSize) const;
+			bool createVertexBufferData(VertexBufferData* pVertexBufferData, UINT size) const;
+			void drawVertexBuffer(VertexBufferData* pVertexBufferData, D3DPRIMITIVETYPE type) const;
+
 		};
 
 	}
