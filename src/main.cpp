@@ -112,23 +112,30 @@ static void takeInjectionAction(io::action curAction, io::launchMethod curLaunch
 }
 
 
-static DWORD searchProcId(const std::string* pProcName);
+static bool searchProcId(const std::string* pProcName, std::vector<DWORD>* pProcIds);
 
 static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation curHandleCreation) {
-	const DWORD procId = searchProcId(pProcName);
+	std::vector<DWORD> procIds{};
 
-	if (!procId) return nullptr;
+	if (!searchProcId(pProcName, &procIds)) return nullptr;
 
 	HANDLE hProc = nullptr;
-	switch (curHandleCreation) {
-	case io::OPEN_PROCESS:
-		hProc = OpenProcess(PROCESS_REQUIRED_ACCESS, FALSE, procId);
-		break;
-	case io::DUPLICATE_HANDLE:
-		hProc = hax::proc::getDuplicateProcessHandle(PROCESS_REQUIRED_ACCESS, FALSE, procId);
-		break;
-	default:
-		break;
+
+	for (DWORD procId : procIds) {
+		
+		switch (curHandleCreation) {
+		case io::OPEN_PROCESS:
+			hProc = OpenProcess(PROCESS_REQUIRED_ACCESS, FALSE, procId);
+			break;
+		case io::DUPLICATE_HANDLE:
+			hProc = hax::proc::getDuplicateProcessHandle(PROCESS_REQUIRED_ACCESS, FALSE, procId);
+			break;
+		default:
+			break;
+		}
+
+		if (hProc && hProc != INVALID_HANDLE_VALUE) break;
+
 	}
 
 	if (!hProc || hProc == INVALID_HANDLE_VALUE) {
@@ -146,28 +153,55 @@ static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation 
 }
 
 
-static DWORD searchProcId(const std::string* pProcName) {
+static bool searchProcId(const std::string* pProcName, std::vector<DWORD>* pProcIds) {
 	io::printInfo("Looking for process '" + *pProcName + "'...");
-	DWORD procId = 0;
+
+	size_t size = 0u;
 
 	// search for the process for five seconds
 	for (int i = 0; i < 50; i++) {
-		procId = hax::proc::getProcessId(pProcName->c_str());
 
-		if (procId) break;
+		if (hax::proc::getProcessIds(pProcName->c_str(), nullptr, &size) && size) break;
 
 		Sleep(100);
 	}
 
-	if (!procId) {
+	if (!size) {
 		io::printWinError("Could not find target process.");
 
-		return 0;
+		return false;
 	}
 
-	io::printInfo("Found target process. Process ID: " + std::to_string(procId));
+	DWORD* pIds = new DWORD[size]{};
 
-	return procId;
+	if (!pIds) {
+		io::printPlainError("Failed to allocate memory.");
+
+		return false;
+	}
+
+	if (!hax::proc::getProcessIds(pProcName->c_str(), pIds, &size)) {
+		delete[] pIds;
+		io::printWinError("Failed to get process IDs.");
+
+		return false;
+	}
+
+	io::printInfo("Found target process.");
+
+	for (size_t i = 0u; i < size; i++) {
+		#pragma warning(push)
+		#pragma warning(disable:6385)
+		
+		io::printInfo("ID: " + std::to_string(pIds[i]));
+		pProcIds->emplace_back(pIds[i]);
+
+		#pragma warning(pop)
+	}
+
+	delete[] pIds;
+
+	return true;
 }
 
 
