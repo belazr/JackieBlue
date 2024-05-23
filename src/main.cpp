@@ -141,11 +141,6 @@ static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation 
 	if (!hProc || hProc == INVALID_HANDLE_VALUE) {
 		io::printWinError("Failed to get process handle.");
 
-		// common error when trying to access a process run by higher priviliged user
-		if (GetLastError() == ERROR_ACCESS_DENIED) {
-			io::printInfo("Try running as administrator.");
-		}
-
 		return nullptr;
 	}
 
