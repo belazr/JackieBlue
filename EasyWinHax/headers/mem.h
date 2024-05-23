@@ -48,21 +48,26 @@ namespace hax {
 			// Has to use the same calling convention as the origin function for uninterrupted process execution.
 			// 
 			// [in] originCall:
-			// Address of the call of the origin function call within the detour function. The call should be of the same calling convention as the origin function.
+			// Offset of the call of the origin function call within the detour function. The call should be of the same calling convention as the origin function.
 			// Can be null if there is no call to the origin function in the detour.
 			// 
 			// [in] size:
 			// Number of bytes that get overwritten by the jump at the beginning of the origin function.
 			// The overwritten instructions get executed by the gateway right before executing the origin function.
 			// Has to be at least five! Only complete instructions should be overwritten!
-			// It is necessary to look at the disassembly of the origin function to find out when the first complete instruction finishes after the first five bytes.
+			// It is necessary to look at the disassembly of the origin function to determine when the first complete instruction finishes after the first five bytes.
 			// 
+			// [in] relativeAddressOffset:
+			// The offset of a relative Address if there is one in the first <size> bytes of the origin function.
+			// It is necessary to look at the disassembly of the origin function to determine if there is a relative address in the first <size> bytes.
+			// If there is no relative address in the first <size> bytes of the origin function the default value of SIZE_MAX should be passed. This value will then be ignored.
+			//
 			// Return:
 			// Pointer to the gateway within the virtual address space of the target process or nullptr on failure (eg because of architecture incompatibility)
 			// This address is called by the detour function at the address given by originCall.
 			// The stolen bytes of the orgin function are located here.
 			// Call VirtualFreeEx on the return value to free the memory in the target process.
-			BYTE* trampHook(HANDLE hProc, BYTE* origin, const BYTE* detour, BYTE* originCall, size_t size);
+			BYTE* trampHook(HANDLE hProc, BYTE* origin, BYTE* detour, size_t originCallOffset, size_t size, size_t relativeAddressOffset = SIZE_MAX);
 
 			#ifdef _WIN64
 
@@ -174,11 +179,29 @@ namespace hax {
 			// The buffer that should be patched into the external process. Has to be allocated in the virtual memory of the caller process.
 			// 
 			// [in] size:
-			// Size of the source buffer. Beware of buffer overflow.
+			// Size of the source buffer.
 			// 
 			// Return:
 			// True on success, false on failure.
 			bool patch(HANDLE hProc, BYTE* dst, const BYTE src[], size_t size);
+
+			// Gets the address of a virtual function within the virtual address space of an external process.
+			// 
+			// Parameters:
+			// 
+			// [in] hProc:
+			// Handle to the target process.
+			// Needs at least PROCESS_VM_READ access rights.
+			// 
+			// [in] pInterface:
+			// The pointer to the interface with the v-table containg the target function.
+			// 
+			// [in] index:
+			// Index of the target function in the v-table.
+			// 
+			// Return:
+			// The address of the virtual function or nullpointer on failure.
+			void* getVirtualFunction(HANDLE hProc, const void* pInterface, size_t index);
 
 			// Gets the address pointed to by a multi level pointer within the virtual address space of an external process.
 			// 
@@ -189,13 +212,13 @@ namespace hax {
 			// Needs at least PROCESS_VM_READ access rights.
 			// 
 			// [in] base:
-			// The address of the base pointer within the virtual address space of the target process. This is typically a static address.
+			// The base pointer within the virtual address space of the target process. This is typically a static address.
 			// 
 			// [in] src:
 			// Buffer for the offsets.
 			// 
 			// [in] size:
-			// Size of the offset buffer. Beware of buffer overflow.
+			// Size of the offset buffer.
 			// 
 			// Return:
 			// The address pointed to by dereferencing the multi level pointer or nullpointer on failure.
@@ -298,13 +321,18 @@ namespace hax {
 			// Number of bytes that get overwritten by the jump at the beginning of the origin function.
 			// The overwritten instructions get executed by the gateway right before executing the origin function.
 			// Has to be at least five! Only complete instructions should be overwritten!
-			// It is necessary to look at the disassembly of the origin function to find out when the first complete instruction finishes after the first five bytes.
+			// It is necessary to look at the disassembly of the origin function to determine when the first complete instruction finishes after the first five bytes.
+			// 
+			// [in] relativeAddressOffset:
+			// The offset of a relative Address if there is one in the first <size> bytes of the origin function.
+			// It is necessary to look at the disassembly of the origin function to determine if there is a relative address in the first <size> bytes.
+			// If there is no relative address in the first <size> bytes of the origin function the default value of SIZE_MAX should be passed. This value will then be ignored.
 			// 
 			// Return:
 			// Pointer to the gateway. This address should be called by the detour function with the same calling convention as the origin function.
 			// The stolen bytes of the orgin function are located here.
 			// Call VirtualFree on the return value to free the memory in the process.
-			BYTE* trampHook(BYTE* origin, const BYTE* detour, size_t size);
+			BYTE* trampHook(BYTE* origin, const BYTE* detour, size_t size, size_t relativeAddressOffset = SIZE_MAX);
 
 			#ifdef _WIN64
 
@@ -396,24 +424,38 @@ namespace hax {
 			// The buffer that should be patched into the target process. Has to be allocated in the virtual memory of the caller process.
 			// 
 			// [in] size:
-			// Size of the source buffer. Beware of buffer overflow.
+			// Size of the source buffer.
 			// 
 			// Return:
 			// True on success, false on failure.
 			bool patch(BYTE* dst, const BYTE src[], size_t size);
+
+			// Gets the address of a virtual function within the virtual address space of an external process.
+			// 
+			// Parameters:
+			// 
+			// [in] pInterface:
+			// The pointer to the interface with the v-table containg the target function.
+			// 
+			// [in] index:
+			// Index of the target function in the v-table.
+			// 
+			// Return:
+			// The address of the virtual function or nullpointer on failure.
+			void* getVirtualFunction(const void* pInterface, size_t index);
 
 			// Gets the address pointed to by a multi level pointer within the virtual address space of the caller process.
 			// 
 			// Parameters:
 			// 
 			// [in] base:
-			// The address of the base pointer within the virtual address space of the caller process. This is typically a static address.
+			// The base pointer within the virtual address space of the caller process. This is typically a static address.
 			// 
-			// [in] src:
+			// [in] offsets:
 			// Buffer for the offsets.
 			// 
 			// [in] size:
-			// Size of the offset buffer. Beware of buffer overflow.
+			// Size of the offset buffer.
 			// 
 			// Return:
 			// The address pointed to by dereferencing the multi level pointer or nullpointer on failure.

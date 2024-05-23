@@ -1,5 +1,5 @@
 #pragma once
-#include "ogl2Vertex.h"
+#include "..\Vertex.h"
 #include "..\IDraw.h"
 #define GL_GLEXT_PROTOTYPES
 #include <gl\GL.h>
@@ -104,7 +104,6 @@ namespace hax {
 			bool createBufferData(BufferData* pBufferData, UINT size) const;
 			bool createBuffer(GLenum target, GLenum binding, UINT size, GLuint* pId) const;
 			bool resizeBuffers(BufferData* pBufferData, UINT newSize) const;
-			void moveBuffer(GLenum target, BufferData* const pNewBufferData, BufferData* const pOldBufferData) const;
 		};
 
 	}

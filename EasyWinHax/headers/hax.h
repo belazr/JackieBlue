@@ -13,22 +13,22 @@
 // Headers for engine
 #include "engine\Engine.h"
 #include "engine\IDraw.h"
+#include "engine\Vertex.h"
+#include "engine\rgb.h"
 
 // Headers for DirectX
-#include "engine\dx\font\dxFonts.h"
+#include "engine\dx\font\dxFont.h"
 
 // Headers for DirectX 9
 #pragma comment(lib, "d3d9.lib")
 
 #include "engine\dx\dx9\dx9Draw.h"
-#include "engine\dx\dx9\dx9Vertex.h"
 
 // Headers for DirectX 11
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
 #include "engine\dx\dx11\dx11Draw.h"
-#include "engine\dx\dx11\dx11Vertex.h"
 
 // Headers for OpenGL 2
 #pragma comment( lib, "OpenGL32.lib" )
