@@ -41,17 +41,6 @@ namespace io {
 	// Action currently selected. Number is printed in brackets: " [2] label".
 	void printMainMenu(action action);
 
-	// Prints the sub menu to select the handle creation.
-	// 
-	// Parameters:
-	// 
-	// [in] curAction:
-	// Action currently selected.
-	// 
-	// [in] curHandleCreation:
-	// Handle creation currently selected. Number is printed in brackets: " [2] label".
-	void printHandleCreationMenu(action curAction, handleCreation curHandleCreation);
-
 	// Prints the sub menu to select the launch method.
 	// 
 	// Parameters:
@@ -63,6 +52,17 @@ namespace io {
 	// Launch method currently selected. Number is printed in brackets: " [2] label".
 	void printLaunchMethodMenu(action curAction, launchMethod curLaunchMethod);
 
+	// Prints the sub menu to select the handle creation.
+	// 
+	// Parameters:
+	// 
+	// [in] curAction:
+	// Action currently selected.
+	// 
+	// [in] curHandleCreation:
+	// Handle creation currently selected. Number is printed in brackets: " [2] label".
+	void printHandleCreationMenu(action curAction, handleCreation curHandleCreation);
+
 	// Lets the user select the action to be executed.
 	// 
 	// Parameters:
@@ -71,14 +71,6 @@ namespace io {
 	// Action currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
 	void selectAction(action* pAction);
 
-	// Lets the user select the handle creation.
-	// 
-	// Parameters:
-	// 
-	// [in/out] pHandleCreation:
-	// Handle creation currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
-	void selectHandleCreation(handleCreation* pHandleCreation);
-
 	// Lets the user select the launch method of the code to execute the injection.
 	// 
 	// Parameters:
@@ -86,6 +78,14 @@ namespace io {
 	// [in/out] pSelect:
 	// Launch method currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
 	void selectLaunchMethod(launchMethod* pLaunchMethod);
+
+	// Lets the user select the handle creation.
+	// 
+	// Parameters:
+	// 
+	// [in/out] pHandleCreation:
+	// Handle creation currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
+	void selectHandleCreation(handleCreation* pHandleCreation);
 
 	// Lets the user select the targets.
 	// 

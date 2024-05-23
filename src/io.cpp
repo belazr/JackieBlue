@@ -125,13 +125,13 @@ namespace io {
 	}
 
 
-	void printHandleCreationMenu(action curAction, handleCreation curHandleCreation) {
+	void printLaunchMethodMenu(action curAction, launchMethod curLaunchMethod) {
 		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
 
-		printMenuItem("Select handle creation (" + actionLabels.at(curAction) + "):");
+		printMenuItem("Select launch method (" + actionLabels.at(curAction) + "):");
 
-		for (int i = handleCreation::OPEN_PROCESS; i < handleCreation::MAX_HANDLE_CREATION; i++) {
-			printMenuItem(getMenuEntryString(static_cast<handleCreation>(i), &handleCreationLabels, i == curHandleCreation));
+		for (int i = launchMethod::CREATE_THREAD; i < launchMethod::MAX_LAUNCH_METHOD; i++) {
+			printMenuItem(getMenuEntryString(static_cast<launchMethod>(i), &launchMethodLabels, i == curLaunchMethod));
 		}
 
 		std::cout << std::endl;
@@ -140,13 +140,13 @@ namespace io {
 	}
 
 
-	void printLaunchMethodMenu(action curAction, launchMethod curLaunchMethod) {
+	void printHandleCreationMenu(action curAction, handleCreation curHandleCreation) {
 		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
 
-		printMenuItem("Select launch method (" + actionLabels.at(curAction) + "):");
+		printMenuItem("Select handle creation (" + actionLabels.at(curAction) + "):");
 
-		for (int i = launchMethod::CREATE_THREAD; i < launchMethod::MAX_LAUNCH_METHOD; i++) {
-			printMenuItem(getMenuEntryString(static_cast<launchMethod>(i), &launchMethodLabels, i == curLaunchMethod));
+		for (int i = handleCreation::OPEN_PROCESS; i < handleCreation::MAX_HANDLE_CREATION; i++) {
+			printMenuItem(getMenuEntryString(static_cast<handleCreation>(i), &handleCreationLabels, i == curHandleCreation));
 		}
 
 		std::cout << std::endl;
@@ -168,23 +168,23 @@ namespace io {
 	}
 
 
-	void selectHandleCreation(handleCreation* pHandleCreation) {
-		const int input = getIntInput();
-
-		if (input < 0 || input >= handleCreation::MAX_HANDLE_CREATION) return;
-
-		*pHandleCreation = static_cast<handleCreation>(input);
-
-		return;
-	}
-
-
 	void selectLaunchMethod(launchMethod* pLaunchMethod) {
 		const int input = getIntInput();
 
 		if (input < 0 || input >= launchMethod::MAX_LAUNCH_METHOD) return;
 
 		*pLaunchMethod = static_cast<launchMethod>(input);
+
+		return;
+	}
+
+
+	void selectHandleCreation(handleCreation* pHandleCreation) {
+		const int input = getIntInput();
+
+		if (input < 0 || input >= handleCreation::MAX_HANDLE_CREATION) return;
+
+		*pHandleCreation = static_cast<handleCreation>(input);
 
 		return;
 	}
@@ -223,7 +223,7 @@ namespace io {
 
 		// common error when trying to access a process run by higher priviliged user
 		if (winError == ERROR_ACCESS_DENIED) {
-			io::printInfo("Try running as administrator.");
+			io::printPlainError("Try running as administrator.");
 		}
 
 		return;
