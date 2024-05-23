@@ -216,8 +216,15 @@ namespace io {
 
 
 	void printWinError(std::string msg) {
-		std::string winError = " Error code: " + std::to_string(GetLastError());
-		printPlainError(msg + winError);
+		const DWORD winError = GetLastError();
+		
+		std::string winErrorStr = " Error code: " + std::to_string(winError);
+		printPlainError(msg + winErrorStr);
+
+		// common error when trying to access a process run by higher priviliged user
+		if (winError == ERROR_ACCESS_DENIED) {
+			io::printInfo("Try running as administrator.");
+		}
 
 		return;
 	}
