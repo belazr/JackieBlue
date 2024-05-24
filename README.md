@@ -60,9 +60,13 @@ If no number is entered the launch method marked in brackets is selected.
 "Set windows hook" and "Hook NtUserBeginPaint" will not work on console applications.
 "Set windows hook" will only work if injector and target process architectures match.
 
-Finally the menu to select how to create a handle to the target process is shown.
+Now the menu to select how to create a handle to the target process is shown.
 Select a creation method by entering the item number from the menu. Press enter.
-Now the selected action is performed and the status is displayed in the logging section.
+
+If there are multiple processes with the same name, another menu to select the target process ID is displayed.
+Again, select the process ID by entering the item number from the menu. Press enter.
+
+Now the selected action is performed on the selected process and the status is displayed in the logging section.
 
 The binary can also be launched from the command line setting the target, DLL and path like this:
 
@@ -76,7 +80,6 @@ Restarting the program is required for proper display.
 
 ## TODOs
 - Add more injection methods
-- Validate user input
 - Use virtual console sequences for printing (maybe)
 - GUI (some day)
 
