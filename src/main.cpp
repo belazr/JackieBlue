@@ -112,30 +112,35 @@ static void takeInjectionAction(io::action curAction, io::launchMethod curLaunch
 }
 
 
-static bool searchProcId(const std::string* pProcName, std::vector<DWORD>* pProcIds);
+static bool findProcIds(const std::string* pProcName, std::vector<DWORD>& procIds);
 
 static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation curHandleCreation) {
 	std::vector<DWORD> procIds{};
 
-	if (!searchProcId(pProcName, &procIds)) return nullptr;
+	if (!findProcIds(pProcName, procIds)) return nullptr;
+
+	size_t targetProcIdIndex = 0;
+	
+	if (procIds.size() > 1) {
+		io::printProcessIdMenu(procIds);
+		io::selectProcessIdIndex(&targetProcIdIndex);
+	}
+
+	const DWORD procId = procIds.at(targetProcIdIndex);
+
+	io::printInfo("Injecting into process with ID: " + std::to_string(procId) + ".");
 
 	HANDLE hProc = nullptr;
-
-	for (DWORD procId : procIds) {
-		
-		switch (curHandleCreation) {
-		case io::OPEN_PROCESS:
-			hProc = OpenProcess(PROCESS_REQUIRED_ACCESS, FALSE, procId);
-			break;
-		case io::DUPLICATE_HANDLE:
-			hProc = hax::proc::getDuplicateProcessHandle(PROCESS_REQUIRED_ACCESS, FALSE, procId);
-			break;
-		default:
-			break;
-		}
-
-		if (hProc && hProc != INVALID_HANDLE_VALUE) break;
-
+	
+	switch (curHandleCreation) {
+	case io::OPEN_PROCESS:
+		hProc = OpenProcess(PROCESS_REQUIRED_ACCESS, FALSE, procId);
+		break;
+	case io::DUPLICATE_HANDLE:
+		hProc = hax::proc::getDuplicateProcessHandle(PROCESS_REQUIRED_ACCESS, FALSE, procId);
+		break;
+	default:
+		break;
 	}
 
 	if (!hProc || hProc == INVALID_HANDLE_VALUE) {
@@ -148,8 +153,8 @@ static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation 
 }
 
 
-static bool searchProcId(const std::string* pProcName, std::vector<DWORD>* pProcIds) {
-	io::printInfo("Looking for process '" + *pProcName + "'...");
+static bool findProcIds(const std::string* pProcName, std::vector<DWORD>& procIds) {
+	io::printInfo("Looking for processes with name: '" + *pProcName + "'...");
 
 	size_t size = 0u;
 
@@ -162,7 +167,7 @@ static bool searchProcId(const std::string* pProcName, std::vector<DWORD>* pProc
 	}
 
 	if (!size) {
-		io::printWinError("Could not find target process.");
+		io::printWinError("Could not find any processes.");
 
 		return false;
 	}
@@ -175,21 +180,20 @@ static bool searchProcId(const std::string* pProcName, std::vector<DWORD>* pProc
 		return false;
 	}
 
-	if (!hax::proc::getProcessIds(pProcName->c_str(), pIds, &size)) {
+	if (!hax::proc::getProcessIds(pProcName->c_str(), pIds, &size) || !size) {
 		delete[] pIds;
 		io::printWinError("Failed to get process IDs.");
 
 		return false;
 	}
 
-	io::printInfo("Found target process.");
+	io::printInfo(std::to_string(size) + " porcess(es) found.");
 
 	for (size_t i = 0u; i < size; i++) {
 		#pragma warning(push)
 		#pragma warning(disable:6385)
 		
-		io::printInfo("ID: " + std::to_string(pIds[i]));
-		pProcIds->emplace_back(pIds[i]);
+		procIds.emplace_back(pIds[i]);
 
 		#pragma warning(pop)
 	}

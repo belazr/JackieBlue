@@ -63,6 +63,14 @@ namespace io {
 	// Handle creation currently selected. Number is printed in brackets: " [2] label".
 	void printHandleCreationMenu(action curAction, handleCreation curHandleCreation);
 
+	// Prints the sub menu to select the process ID.
+	// 
+	// Parameters:
+	// 
+	// [in] procIds:
+	// List with all process IDs that are offered as a selection.
+	void printProcessIdMenu(const std::vector<DWORD>& procIds);
+
 	// Lets the user select the action to be executed.
 	// 
 	// Parameters:
@@ -86,6 +94,14 @@ namespace io {
 	// [in/out] pHandleCreation:
 	// Handle creation currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
 	void selectHandleCreation(handleCreation* pHandleCreation);
+
+	// Lets the user select the target process ID.
+	// 
+	// Parameters:
+	// 
+	// [in/out] pProcIdIndex:
+	// Index of process id currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
+	void selectProcessIdIndex(size_t* pProcIdIndex);
 
 	// Lets the user select the targets.
 	// 
