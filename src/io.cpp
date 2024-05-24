@@ -155,6 +155,41 @@ namespace io {
 	}
 
 
+	void printProcessIdMenu(const std::vector<DWORD>& procIds) {
+		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
+
+		printMenuItem("Select process ID:");
+
+		for (size_t i = 0; i < procIds.size(); i++) {
+			std::string menuItem{};
+
+			if (i == 0) {
+				menuItem += "[";
+			}
+			else {
+				menuItem += " ";
+			}
+
+			menuItem += std::to_string(i + 1);
+
+			if (i == 0) {
+				menuItem += "]";
+			}
+			else {
+				menuItem += " ";
+			}
+
+			menuItem += " " + std::to_string(procIds.at(i));
+
+			printMenuItem(menuItem);
+		}
+
+		std::cout << std::endl;
+
+		return;
+	}
+
+
 	static int getIntInput();
 	
 	void selectAction(action* pAction) {
@@ -185,6 +220,19 @@ namespace io {
 		if (input < 0 || input >= handleCreation::MAX_HANDLE_CREATION) return;
 
 		*pHandleCreation = static_cast<handleCreation>(input);
+
+		return;
+	}
+
+
+	void selectProcessIdIndex(size_t* pProcIdIndex) {
+		const int input = getIntInput();
+
+		if (input < 1) return;
+
+		*pProcIdIndex = static_cast<DWORD>(input) - 1;
+
+		SetConsoleCursorPosition(hStdOut, cursorAfterLog);
 
 		return;
 	}
