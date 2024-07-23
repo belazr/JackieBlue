@@ -180,23 +180,27 @@ static bool findProcIds(const std::string* pProcName, std::vector<DWORD>& procId
 		return false;
 	}
 
-	if (!hax::proc::getProcessIds(pProcName->c_str(), pIds, &size) || !size) {
+	size_t tmp = size;
+
+	if (!hax::proc::getProcessIds(pProcName->c_str(), pIds, &tmp) || !tmp) {
 		delete[] pIds;
 		io::printWinError("Failed to get process IDs.");
 
 		return false;
 	}
 
-	io::printInfo(std::to_string(size) + " porcess(es) found.");
+	size_t processCount = 0;
 
-	for (size_t i = 0u; i < size; i++) {
-		#pragma warning(push)
-		#pragma warning(disable:6385)
+	for (size_t i = 0u; i < size; i++) {		
 		
-		procIds.emplace_back(pIds[i]);
+		if (pIds[i]) {
+			procIds.emplace_back(pIds[i]);
+			processCount++;
+		}
 
-		#pragma warning(pop)
 	}
+
+	io::printInfo(std::to_string(processCount) + " porcess(es) found.");
 
 	delete[] pIds;
 
