@@ -82,7 +82,7 @@ namespace hax {
 		// Address of a buffer for the ThreadEntry structs.
 		// 
 		// [in] size:
-		// Size of the buffer at pThreadEntries
+		// How many thread entries pThreadEntries can hold.
 		// 
 		// Return:
 		// True on success, false on failure or if the buffer was too small.
