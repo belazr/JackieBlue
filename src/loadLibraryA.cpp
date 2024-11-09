@@ -81,9 +81,10 @@ namespace loadLib {
 		}
 
 		uintptr_t pModBase = 0;
+		const hax::launch::Status status = pLaunchFunc(hProc, reinterpret_cast<hax::launch::tLaunchableFunc>(_LoadLibraryA), pDllPath, &pModBase);
 
-		if (!pLaunchFunc(hProc, reinterpret_cast<hax::launch::tLaunchableFunc>(_LoadLibraryA), pDllPath, &pModBase)) {
-			io::printWinError("Failed to launch code execution in target process.");
+		if (status != hax::launch::Status::SUCCESS) {
+			io::printLaunchError(status);
 			VirtualFreeEx(hProc, pDllPath, 0, MEM_RELEASE);
 			
 			return false;

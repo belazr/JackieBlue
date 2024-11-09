@@ -27,27 +27,27 @@
 namespace io {
 
 	// labels for actions
-	static const std::unordered_map<action, std::string> actionLabels{
-		{ action::LOAD_LIB, "LoadLibraryA injection"},
-		{ action::MAN_MAP, "Manual mapping"},
-		{ action::UNLINK, "Unlink DLL"},
-		{ action::CHANGE_TARGETS, "Change targets"},
-		{ action::EXIT, "Exit"}
+	static const std::unordered_map<Action, std::string> actionLabels{
+		{ Action::LOAD_LIB, "LoadLibraryA injection"},
+		{ Action::MAN_MAP, "Manual mapping"},
+		{ Action::UNLINK, "Unlink DLL"},
+		{ Action::CHANGE_TARGETS, "Change targets"},
+		{ Action::EXIT, "Exit"}
 	};
 
 	// labels for launchMethods
-	static const std::unordered_map<launchMethod, std::string> launchMethodLabels{
-		{ launchMethod::CREATE_THREAD, "Create thread"},
-		{ launchMethod::HIJACK_THREAD, "Hijack thread"},
-		{ launchMethod::SET_WINDOWS_HOOK, "Set windows hook"},
-		{ launchMethod::HOOK_BEGIN_PAINT, "Hook NtUserBeginPaint"},
-		{ launchMethod::QUEUE_USER_APC, "Queue user APC"}
+	static const std::unordered_map<LaunchMethod, std::string> launchMethodLabels{
+		{ LaunchMethod::CREATE_THREAD, "Create thread"},
+		{ LaunchMethod::HIJACK_THREAD, "Hijack thread"},
+		{ LaunchMethod::SET_WINDOWS_HOOK, "Set windows hook"},
+		{ LaunchMethod::HOOK_BEGIN_PAINT, "Hook NtUserBeginPaint"},
+		{ LaunchMethod::QUEUE_USER_APC, "Queue user APC"}
 	};
 
 	// labels for handleCreations
-	static const std::unordered_map<handleCreation, std::string> handleCreationLabels{
-		{ handleCreation::OPEN_PROCESS, "Call OpenProcess"},
-		{ handleCreation::DUPLICATE_HANDLE, "Duplicate handle"}
+	static const std::unordered_map<HandleCreation, std::string> handleCreationLabels{
+		{ HandleCreation::OPEN_PROCESS, "Call OpenProcess"},
+		{ HandleCreation::DUPLICATE_HANDLE, "Duplicate handle"}
 	};
 
 	static HANDLE hStdOut;
@@ -107,31 +107,31 @@ namespace io {
 	template<typename Enum>
 	static std::string getMenuEntryString(Enum curEntry, const std::unordered_map<Enum, std::string>* pMap, bool isSelected);
 
-	void printMainMenu(action curAction) {
+	void printMainMenu(Action curAction) {
 		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
 
 		printMenuItem("Select action:");
 
 		// print all options starting at the first non exit option
-		for (int i = action::EXIT + 1; i < action::MAX_ACTION; i++) {
-			printMenuItem(getMenuEntryString(static_cast<action>(i), &actionLabels, i == curAction));
+		for (int i = Action::EXIT + 1; i < Action::MAX_ACTION; i++) {
+			printMenuItem(getMenuEntryString(static_cast<Action>(i), &actionLabels, i == curAction));
 		}
 
 		// print the exit option as last entry
-		printMenuItem(getMenuEntryString(action::EXIT, &actionLabels, false));
+		printMenuItem(getMenuEntryString(Action::EXIT, &actionLabels, false));
 		std::cout << std::endl;
 
 		return;
 	}
 
 
-	void printLaunchMethodMenu(action curAction, launchMethod curLaunchMethod) {
+	void printLaunchMethodMenu(Action curAction, LaunchMethod curLaunchMethod) {
 		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
 
 		printMenuItem("Select launch method (" + actionLabels.at(curAction) + "):");
 
-		for (int i = launchMethod::CREATE_THREAD; i < launchMethod::MAX_LAUNCH_METHOD; i++) {
-			printMenuItem(getMenuEntryString(static_cast<launchMethod>(i), &launchMethodLabels, i == curLaunchMethod));
+		for (int i = LaunchMethod::CREATE_THREAD; i < LaunchMethod::MAX_LAUNCH_METHOD; i++) {
+			printMenuItem(getMenuEntryString(static_cast<LaunchMethod>(i), &launchMethodLabels, i == curLaunchMethod));
 		}
 
 		std::cout << std::endl;
@@ -140,13 +140,13 @@ namespace io {
 	}
 
 
-	void printHandleCreationMenu(action curAction, handleCreation curHandleCreation) {
+	void printHandleCreationMenu(Action curAction, HandleCreation curHandleCreation) {
 		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
 
 		printMenuItem("Select handle creation (" + actionLabels.at(curAction) + "):");
 
-		for (int i = handleCreation::OPEN_PROCESS; i < handleCreation::MAX_HANDLE_CREATION; i++) {
-			printMenuItem(getMenuEntryString(static_cast<handleCreation>(i), &handleCreationLabels, i == curHandleCreation));
+		for (int i = HandleCreation::OPEN_PROCESS; i < HandleCreation::MAX_HANDLE_CREATION; i++) {
+			printMenuItem(getMenuEntryString(static_cast<HandleCreation>(i), &handleCreationLabels, i == curHandleCreation));
 		}
 
 		std::cout << std::endl;
@@ -192,34 +192,34 @@ namespace io {
 
 	static int getIntInput();
 	
-	void selectAction(action* pAction) {
+	void selectAction(Action* pAction) {
 		const int input = getIntInput();
 
-		if (input < 0 || input >= action::MAX_ACTION) return;
+		if (input < 0 || input >= Action::MAX_ACTION) return;
 
-		*pAction = static_cast<action>(input);
+		*pAction = static_cast<Action>(input);
 
 		return;
 	}
 
 
-	void selectLaunchMethod(launchMethod* pLaunchMethod) {
+	void selectLaunchMethod(LaunchMethod* pLaunchMethod) {
 		const int input = getIntInput();
 
-		if (input < 0 || input >= launchMethod::MAX_LAUNCH_METHOD) return;
+		if (input < 0 || input >= LaunchMethod::MAX_LAUNCH_METHOD) return;
 
-		*pLaunchMethod = static_cast<launchMethod>(input);
+		*pLaunchMethod = static_cast<LaunchMethod>(input);
 
 		return;
 	}
 
 
-	void selectHandleCreation(handleCreation* pHandleCreation) {
+	void selectHandleCreation(HandleCreation* pHandleCreation) {
 		const int input = getIntInput();
 
-		if (input < 0 || input >= handleCreation::MAX_HANDLE_CREATION) return;
+		if (input < 0 || input >= HandleCreation::MAX_HANDLE_CREATION) return;
 
-		*pHandleCreation = static_cast<handleCreation>(input);
+		*pHandleCreation = static_cast<HandleCreation>(input);
 
 		return;
 	}
@@ -290,6 +290,15 @@ namespace io {
 	}
 
 
+	void printLaunchError(hax::launch::Status status){
+		std::string launchErrorMsg = "Failed to launch code execution in target process with status: ";
+		launchErrorMsg.append(std::to_string(status) + ".");
+		printPlainError(launchErrorMsg);
+
+		return;
+	}
+
+
 	static void printLogText(std::string msg, const char* prefix, WORD attribute);
 
 	void printPlainError(std::string msg) {
@@ -324,7 +333,7 @@ namespace io {
 	}
 
 
-	void printInjectionResult(action curAction, launchMethod curLaunchMethod, bool success) {
+	void printInjectionResult(Action curAction, LaunchMethod curLaunchMethod, bool success) {
 		std::string resultString = "\"" + actionLabels.at(curAction) + "\"";
 		resultString += " with launch method: \"" + launchMethodLabels.at(curLaunchMethod) + "\"";
 		

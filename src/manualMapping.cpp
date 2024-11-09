@@ -100,10 +100,11 @@ namespace manMap {
 		}
 
 		uintptr_t pModBase = 0;
+		const hax::launch::Status status = pLaunchFunc(hProc, reinterpret_cast<hax::launch::tLaunchableFunc>(pShellCode), pImageBase, &pModBase);
 
 		// parameters were written to the dll image base because the pe header of the dll is not needed anyway
-		if (!pLaunchFunc(hProc, reinterpret_cast<hax::launch::tLaunchableFunc>(pShellCode), pImageBase, &pModBase)) {
-			io::printWinError("Failed to launch code execution in target process.");
+		if (status != hax::launch::Status::SUCCESS) {
+			io::printLaunchError(status);
 			VirtualFreeEx(hProc, pImageBase, 0, MEM_RELEASE);
 			VirtualFreeEx(hProc, pShellCode, 0, MEM_RELEASE);
 
@@ -289,9 +290,9 @@ namespace manMap {
 	// manuall mapping shell code C++ implementation for documentation and maintenance purposes
 	// injector uses the precompiled byte arrays at the top of the file so the x64 compilation is able to inject into x86 targets and injection works in debug mode
 	// DO NOT COMPILE IN DEBUG MODE
-	#define COMPILE_SHELL_CODE FALSE
+	// #define COMPILE_SHELL_CODE
 	
-	#if COMPILE_SHELL_CODE
+	#ifdef COMPILE_SHELL_CODE
 
 	#ifdef _WIN64
 
