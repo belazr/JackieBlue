@@ -10,12 +10,12 @@ namespace hax {
 
 		namespace vk {
 
-			typedef struct VulkanInitData {
+			typedef struct InitData {
 				PFN_vkQueuePresentKHR pVkQueuePresentKHR;
 				VkDevice hDevice;
-			}VulkanInitData;
+			}InitData;
 
-			bool getVulkanInitData(VulkanInitData* initData);
+			bool getInitData(InitData* initData);
 
 			class Backend : public IBackend {
 			private:
@@ -28,37 +28,31 @@ namespace hax {
 					VkFence hFence;
 				}ImageData;
 
-				VkQueue _hQueue;
 				const VkPresentInfoKHR* _phPresentInfo;
 				VkDevice _hDevice;
 
 				HMODULE _hVulkan;
 				HWND _hMainWindow;
-				VkInstance _hInstance;
 
 				union {
 					Functions _f;
 					void* _fPtrs[sizeof(Functions) / sizeof(void*)];
 				};
 
-				VkPhysicalDevice _hPhysicalDevice;
 				uint32_t _graphicsQueueFamilyIndex;
 				VkRenderPass _hRenderPass;
 				VkCommandPool _hCommandPool;
-				VkShaderModule _hShaderModuleVert;
-				VkShaderModule _hShaderModuleFrag;
-				VkDescriptorSetLayout _hDescriptorSetLayout;
 				VkPipelineLayout _hPipelineLayout;
 				VkPipeline _hTriangleListPipeline;
 				VkPipeline _hPointListPipeline;
 				VkPhysicalDeviceMemoryProperties _memoryProperties;
 				VkQueue _hFirstGraphicsQueue;
+				VkViewport _viewport;
 
 				ImageData* _pImageDataArray;
 				uint32_t _imageCount;
-				VkDeviceSize _bufferAlignment;
 				ImageData* _pCurImageData;
-				RECT _viewport;
+
 
 			public:
 				Backend();
@@ -76,8 +70,8 @@ namespace hax {
 				// Pass the VkPresentInfoKHR*.
 				//
 				// [in] pArg3:
-				// Pass the device handle that was retrieved by vk::getVulkanInitData().
-				virtual void setHookArguments(void* pArg1 = nullptr, const void* pArg2 = nullptr, void* pArg3 = nullptr) override;
+				// Pass the device handle that was retrieved by vk::getInitData().
+				virtual void setHookArguments(void* pArg1 = nullptr, void* pArg2 = nullptr) override;
 
 				// Initializes the backend. Should be called by an Engine object until success.
 				// 
@@ -119,16 +113,18 @@ namespace hax {
 
 			private:
 				bool getProcAddresses();
+				bool getPhysicalDeviceProperties();
 				bool createRenderPass();
 				bool createCommandPool();
-				VkPipeline createPipeline(VkPrimitiveTopology topology);
-				VkShaderModule createShaderModule(const BYTE shader[], size_t size) const;
 				bool createPipelineLayout();
-				bool createDescriptorSetLayout();
-				bool resizeImageDataArray(VkSwapchainKHR hSwapchain, uint32_t imageCount);
+				VkDescriptorSetLayout createDescriptorSetLayout() const;
+				VkPipeline createPipeline(VkPrimitiveTopology topology) const;
+				VkShaderModule createShaderModule(const BYTE shader[], size_t size) const;
+				bool createImageDataArray(uint32_t imageCount);
 				void destroyImageDataArray();
 				void destroyImageData(ImageData* pImageData) const;
-				bool createFramebuffers(VkSwapchainKHR hSwapchain);
+				bool getCurrentViewport(VkViewport* pViewport) const;
+				bool createFramebuffers(VkViewport viewport);
 				void destroyFramebuffers();
 				bool beginCommandBuffer(VkCommandBuffer hCommandBuffer) const;
 				void beginRenderPass(VkCommandBuffer hCommandBuffer, VkFramebuffer hFramebuffer) const;

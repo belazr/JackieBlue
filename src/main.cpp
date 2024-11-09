@@ -5,8 +5,8 @@
 
 #define PROCESS_REQUIRED_ACCESS (PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_CREATE_THREAD)
 
-static void takeInjectionAction(io::action curAction, io::launchMethod curLaunchMethod, io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
-static void takeUnlinkAction(io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName);
+static void takeInjectionAction(io::Action curAction, io::LaunchMethod curLaunchMethod, io::HandleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
+static void takeUnlinkAction(io::HandleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName);
 
 int main(int argc, const char* argv[]) {
 	std::string procName;
@@ -26,27 +26,27 @@ int main(int argc, const char* argv[]) {
 	}
 
 	// defaults
-	io::action curAction = io::action::LOAD_LIB;
-	io::handleCreation curHandleCreation = io::handleCreation::OPEN_PROCESS;
-	io::launchMethod curLaunchMethod = io::launchMethod::CREATE_THREAD;
+	io::Action curAction = io::Action::LOAD_LIB;
+	io::HandleCreation curHandleCreation = io::HandleCreation::OPEN_PROCESS;
+	io::LaunchMethod curLaunchMethod = io::LaunchMethod::CREATE_THREAD;
 
-	while (curAction != io::action::EXIT) {
+	while (curAction != io::Action::EXIT) {
 		io::printHeader();
 		io::printTargetInfo(procName, dllName, dllDir);
 		io::printMainMenu(curAction);
 		io::selectAction(&curAction);
 
 		switch (curAction) {
-		case io::action::LOAD_LIB:
-		case io::action::MAN_MAP:
+		case io::Action::LOAD_LIB:
+		case io::Action::MAN_MAP:
 			io::printLaunchMethodMenu(curAction, curLaunchMethod);
 			io::selectLaunchMethod(&curLaunchMethod);
-		case io::action::UNLINK:
+		case io::Action::UNLINK:
 			io::printHandleCreationMenu(curAction, curHandleCreation);
 			io::selectHandleCreation(&curHandleCreation);
 			io::initLog();
 			break;
-		case io::action::CHANGE_TARGETS:
+		case io::Action::CHANGE_TARGETS:
 			io::selectTargets(&procName, &dllName, &dllDir);
 			break;
 		default:
@@ -54,11 +54,11 @@ int main(int argc, const char* argv[]) {
 		}
 
 		switch (curAction) {
-		case io::action::LOAD_LIB:
-		case io::action::MAN_MAP:
+		case io::Action::LOAD_LIB:
+		case io::Action::MAN_MAP:
 			takeInjectionAction(curAction, curLaunchMethod, curHandleCreation, &procName, &dllName, &dllDir);
 			break;
-		case io::action::UNLINK:
+		case io::Action::UNLINK:
 			takeUnlinkAction(curHandleCreation, &procName, &dllName);
 			break;
 		default:
@@ -71,10 +71,10 @@ int main(int argc, const char* argv[]) {
 }
 
 
-static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation curHandleCreation);
-static hax::launch::tLaunchFunc getLaunchFunction(io::launchMethod launchMethod, BOOL isWow64);
+static HANDLE getProcessHandle(const std::string* pProcName, io::HandleCreation curHandleCreation);
+static hax::launch::tLaunchFunc getLaunchFunction(io::LaunchMethod launchMethod, BOOL isWow64);
 
-static void takeInjectionAction(io::action curAction, io::launchMethod curLaunchMethod, io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir) {
+static void takeInjectionAction(io::Action curAction, io::LaunchMethod curLaunchMethod, io::HandleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir) {
 	const HANDLE hProc = getProcessHandle(pProcName, curHandleCreation);
 
 	if (!hProc) return;
@@ -94,10 +94,10 @@ static void takeInjectionAction(io::action curAction, io::launchMethod curLaunch
 	bool success = false;
 
 	switch (curAction) {
-	case io::action::LOAD_LIB:
+	case io::Action::LOAD_LIB:
 		success = loadLib::inject(hProc, dllFullPath.c_str(), pLaunchFunc);
 		break;
-	case io::action::MAN_MAP:
+	case io::Action::MAN_MAP:
 		success = manMap::inject(hProc, dllFullPath.c_str(), pLaunchFunc);
 		break;
 	default:
@@ -114,7 +114,7 @@ static void takeInjectionAction(io::action curAction, io::launchMethod curLaunch
 
 static bool findProcIds(const std::string* pProcName, std::vector<DWORD>& procIds);
 
-static HANDLE getProcessHandle(const std::string* pProcName, io::handleCreation curHandleCreation) {
+static HANDLE getProcessHandle(const std::string* pProcName, io::HandleCreation curHandleCreation) {
 	std::vector<DWORD> procIds{};
 
 	if (!findProcIds(pProcName, procIds)) return nullptr;
@@ -208,17 +208,17 @@ static bool findProcIds(const std::string* pProcName, std::vector<DWORD>& procId
 }
 
 
-static hax::launch::tLaunchFunc getLaunchFunction(io::launchMethod launchMethod, BOOL isWow64) {
+static hax::launch::tLaunchFunc getLaunchFunction(io::LaunchMethod launchMethod, BOOL isWow64) {
 	hax::launch::tLaunchFunc pLaunchFunc = nullptr;
 
 	switch (launchMethod) {
-	case io::launchMethod::CREATE_THREAD:
+	case io::LaunchMethod::CREATE_THREAD:
 		pLaunchFunc = hax::launch::createThread;
 		break;
-	case io::launchMethod::HIJACK_THREAD:
+	case io::LaunchMethod::HIJACK_THREAD:
 		pLaunchFunc = hax::launch::hijackThread;
 		break;
-	case io::launchMethod::SET_WINDOWS_HOOK:
+	case io::LaunchMethod::SET_WINDOWS_HOOK:
 		
 		#ifdef _WIN64
 
@@ -240,10 +240,10 @@ static hax::launch::tLaunchFunc getLaunchFunction(io::launchMethod launchMethod,
 
 		pLaunchFunc = hax::launch::setWindowsHook;
 		break;
-	case io::launchMethod::HOOK_BEGIN_PAINT:
+	case io::LaunchMethod::HOOK_BEGIN_PAINT:
 		pLaunchFunc = hax::launch::hookBeginPaint;
 		break;
-	case io::launchMethod::QUEUE_USER_APC:
+	case io::LaunchMethod::QUEUE_USER_APC:
 		pLaunchFunc = hax::launch::queueUserApc;
 		break;
 	}
@@ -252,7 +252,7 @@ static hax::launch::tLaunchFunc getLaunchFunction(io::launchMethod launchMethod,
 }
 
 
-static void takeUnlinkAction(io::handleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName) {
+static void takeUnlinkAction(io::HandleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName) {
 	const HANDLE hProc = getProcessHandle(pProcName, curHandleCreation);
 
 	if (!hProc) return;

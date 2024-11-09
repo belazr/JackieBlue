@@ -39,23 +39,18 @@ namespace hax {
 			// The argument of the the hooked function.
 			// For OpenGL 2 wglSwapBuffers hooks pass nothing.
 			// For DirectX 9 EndScene hooks pass the LPDIRECT3DDEVICE9.
-			// For DirectX 11 Present hooks pass the IDXGISwapChain.
-			// For Vulkan QueuePresentKHR hooks pass the VkQueue.
+			// For DirectX 11 Present hooks pass the IDXGISwapChain*.
+			// For DirectX 12 Present hooks pass the IDXGISwapChain3*.
+			// For Vulkan QueuePresentKHR hooks pass the VkPresentInfoKHR.
 			//
 			// [in] pArg2:
 			// The argument of the the hooked function.
 			// For OpenGL 2 wglSwapBuffers hooks pass nothing.
 			// For DirectX 9 EndScene hooks pass nothing.
 			// For DirectX 11 Present hooks pass nothing.
-			// For Vulkan QueuePresentKHR hooks pass the VkPresentInfoKHR.
-			//
-			// [in] pArg3:
-			// The argument of the the hooked function.
-			// For OpenGL 2 wglSwapBuffers hooks pass nothing.
-			// For DirectX 9 EndScene hooks pass nothing.
-			// For DirectX 11 Present hooks pass nothing.
-			// For Vulkan QueuePresentKHR hooks pass the device handle that was retrieved by vk::getVulkanInitData().
-			void beginFrame(void* pArg1 = nullptr, const void* pArg2 = nullptr, void* pArg3 = nullptr);
+			// For DirectX 12 Present hooks pass the ID3D12CommandQueue* that was retrieved by dx12::getInitData().
+			// For Vulkan QueuePresentKHR hooks pass the VkDevice that was retrieved by vk::getInitData().
+			void beginFrame(void* pArg1 = nullptr, void* pArg2 = nullptr);
 
 			// Ends a frame within a hook. Has to be called after any drawing calls.
 			void endFrame();

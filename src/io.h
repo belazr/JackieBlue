@@ -1,4 +1,5 @@
 #pragma once
+#include <hax.h>
 #include <Windows.h>
 #include <unordered_map>
 #include <string>
@@ -8,16 +9,15 @@
 namespace io {
 
 	// options for user selection
-	enum action { EXIT = 0, LOAD_LIB, MAN_MAP, UNLINK, CHANGE_TARGETS, MAX_ACTION };
-	enum launchMethod { CREATE_THREAD = 1, HIJACK_THREAD, SET_WINDOWS_HOOK, HOOK_BEGIN_PAINT, QUEUE_USER_APC, MAX_LAUNCH_METHOD };
-	enum handleCreation { OPEN_PROCESS = 1, DUPLICATE_HANDLE, MAX_HANDLE_CREATION };
+	typedef enum Action { EXIT = 0, LOAD_LIB, MAN_MAP, UNLINK, CHANGE_TARGETS, MAX_ACTION }Action;
+	typedef enum LaunchMethod { CREATE_THREAD = 1, HIJACK_THREAD, SET_WINDOWS_HOOK, HOOK_BEGIN_PAINT, QUEUE_USER_APC, MAX_LAUNCH_METHOD }LaunchMethod;
+	typedef enum HandleCreation { OPEN_PROCESS = 1, DUPLICATE_HANDLE, MAX_HANDLE_CREATION }HandleCreation;
 
 	// Sets the console output handle to std out.
 	void init();
 
 	// Prints the header.
 	void printHeader();
-
 
 	// Prints the target info.
 	// 
@@ -39,7 +39,7 @@ namespace io {
 	// 
 	// [in] curAction:
 	// Action currently selected. Number is printed in brackets: " [2] label".
-	void printMainMenu(action action);
+	void printMainMenu(Action action);
 
 	// Prints the sub menu to select the launch method.
 	// 
@@ -50,7 +50,7 @@ namespace io {
 	// 
 	// [in] curLaunchMethod:
 	// Launch method currently selected. Number is printed in brackets: " [2] label".
-	void printLaunchMethodMenu(action curAction, launchMethod curLaunchMethod);
+	void printLaunchMethodMenu(Action curAction, LaunchMethod curLaunchMethod);
 
 	// Prints the sub menu to select the handle creation.
 	// 
@@ -61,7 +61,7 @@ namespace io {
 	// 
 	// [in] curHandleCreation:
 	// Handle creation currently selected. Number is printed in brackets: " [2] label".
-	void printHandleCreationMenu(action curAction, handleCreation curHandleCreation);
+	void printHandleCreationMenu(Action curAction, HandleCreation curHandleCreation);
 
 	// Prints the sub menu to select the process ID.
 	// 
@@ -77,7 +77,7 @@ namespace io {
 	// 
 	// [in/out] pAction:
 	// Action currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
-	void selectAction(action* pAction);
+	void selectAction(Action* pAction);
 
 	// Lets the user select the launch method of the code to execute the injection.
 	// 
@@ -85,7 +85,7 @@ namespace io {
 	// 
 	// [in/out] pSelect:
 	// Launch method currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
-	void selectLaunchMethod(launchMethod* pLaunchMethod);
+	void selectLaunchMethod(LaunchMethod* pLaunchMethod);
 
 	// Lets the user select the handle creation.
 	// 
@@ -93,7 +93,7 @@ namespace io {
 	// 
 	// [in/out] pHandleCreation:
 	// Handle creation currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
-	void selectHandleCreation(handleCreation* pHandleCreation);
+	void selectHandleCreation(HandleCreation* pHandleCreation);
 
 	// Lets the user select the target process ID.
 	// 
@@ -140,6 +140,14 @@ namespace io {
 	// The error number retrieved by hax::FileLoader::getError()
 	void printFileError(std::string msg, errno_t errNo);
 
+	// Prints the code launch error message in red to the logging section including the status code returned by a launch function.
+	// 
+	// Parameters:
+	// 
+	// [in] status:
+	// The status returned by a launch function.
+	void printLaunchError(hax::launch::Status status);
+
 	// Prints an error message in red to the logging section.
 	// 
 	// Parameters:
@@ -175,7 +183,7 @@ namespace io {
 	// The launch method used for the injection.
 	// [in]
 	// Indicates wether the injection was successful.
-	void printInjectionResult(action curAction, launchMethod curLaunchMethod, bool success);
+	void printInjectionResult(Action curAction, LaunchMethod curLaunchMethod, bool success);
 
 
 	// Prints the result message for an unliking action.
