@@ -3,28 +3,26 @@
 #include <sstream>
 #include <iomanip>
 
-#define HEADER "\
-    /$$$$$                     /$$       /$$           /$$$$$$$  /$$                    \n\
-   |__  $$                    | $$      |__/          | $$__  $$| $$                    \n\
-      | $$  /$$$$$$   /$$$$$$$| $$   /$$ /$$  /$$$$$$ | $$  \\ $$| $$ /$$   /$$  /$$$$$$ \n\
-      | $$ |____  $$ /$$_____/| $$  /$$/| $$ /$$__  $$| $$$$$$$ | $$| $$  | $$ /$$__  $$\n\
- /$$  | $$  /$$$$$$$| $$      | $$$$$$/ | $$| $$$$$$$$| $$__  $$| $$| $$  | $$| $$$$$$$$\n\
-| $$  | $$ /$$__  $$| $$      | $$_  $$ | $$| $$_____/| $$  \\ $$| $$| $$  | $$| $$_____/\n\
-|  $$$$$$/|  $$$$$$$|  $$$$$$$| $$ \\  $$| $$|  $$$$$$$| $$$$$$$/| $$|  $$$$$$/|  $$$$$$$\n\
- \\______/  \\_______/ \\_______/|__/  \\__/|__/ \\_______/|_______/ |__/ \\______/  \\_______/\n\
-"
-
-#define PROCESS_LABEL	"Process:\t\t"
-#define DLL_LABEL		"DLL:\t\t\t"
-#define PATH_LABEL		"DLL Directory:\t"
-
-#define MENU_PREFIX "+ "
-#define ERROR_PREFIX "# "
-#define INFO_PREFIX "> "
-#define SUCCESS_PREFIX "! "
-#define LOG_SEP "------------------------- LOG -------------------------"
-
 namespace io {
+	static constexpr char HEADER[]{
+		"    /$$$$$                     /$$       /$$           /$$$$$$$  /$$                    \n"
+		"   |__  $$                    | $$      |__/          | $$__  $$| $$                    \n"
+		"      | $$  /$$$$$$   /$$$$$$$| $$   /$$ /$$  /$$$$$$ | $$  \\ $$| $$ /$$   /$$  /$$$$$$ \n"
+		"      | $$ |____  $$ /$$_____/| $$  /$$/| $$ /$$__  $$| $$$$$$$ | $$| $$  | $$ /$$__  $$\n"
+		" /$$  | $$  /$$$$$$$| $$      | $$$$$$/ | $$| $$$$$$$$| $$__  $$| $$| $$  | $$| $$$$$$$$\n"
+		"| $$  | $$ /$$__  $$| $$      | $$_  $$ | $$| $$_____/| $$  \\ $$| $$| $$  | $$| $$_____/\n"
+		"|  $$$$$$/|  $$$$$$$|  $$$$$$$| $$ \\  $$| $$|  $$$$$$$| $$$$$$$/| $$|  $$$$$$/|  $$$$$$$\n"
+		" \\______/  \\_______/ \\_______/|__/  \\__/|__/ \\_______/|_______/ |__/ \\______/  \\_______/\n"
+	};
+	static constexpr char PROCESS_LABEL[]{ "Process:\t\t" };
+	static constexpr char DLL_LABEL[]{ "DLL:\t\t\t" };
+	static constexpr char PATH_LABEL[]{ "DLL Directory:\t" };
+
+	static constexpr char MENU_PREFIX[]{ "+ " };
+	static constexpr char ERROR_PREFIX[]{ "# " };
+	static constexpr char INFO_PREFIX[]{ "> " };
+	static constexpr char SUCCESS_PREFIX[]{ "! " };
+	static constexpr char LOG_SEP[]{ "------------------------- LOG -------------------------" };
 
 	// labels for actions
 	static const std::unordered_map<Action, std::string> actionLabels{
