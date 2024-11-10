@@ -3,7 +3,7 @@
 #include "loadLibraryA.h"
 #include "unlinkDll.h"
 
-#define PROCESS_REQUIRED_ACCESS (PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_CREATE_THREAD)
+static constexpr DWORD PROCESS_REQUIRED_ACCESS = (PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_CREATE_THREAD);
 
 static void takeInjectionAction(io::Action curAction, io::LaunchMethod curLaunchMethod, io::HandleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
 static void takeUnlinkAction(io::HandleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName);
