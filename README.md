@@ -37,7 +37,7 @@ Build tested with:
 - Windows 11 64bit
 - Visual Studio 17
 - MSVC v143
-- Windows 11 SDK (10.0.22621)
+- Windows 11 SDK (10.0.26100)
 
 Usage tested with:
 - Windows 11 64bit
@@ -73,6 +73,12 @@ The binary can also be launched from the command line setting the target, DLL an
 ```
 JackieBlue.exe process.exe payload.dll c:\path
 ```
+
+### Proxy
+In some cases the injector cannot obtain a process handle with the access rights needed to inject a DLL, while other processes running on the system can.
+Those processes can act as proxies: build the injector as a DLL using the Project "Proxy".
+When "Proxy.dll" is injected into a proxy process, it spawns a full instance of the injector inside that process.
+This instance can be used the same way as the executable.
 
 ## Known issues
 Resizing the console window to a width smaller than the header breaks the menu.
