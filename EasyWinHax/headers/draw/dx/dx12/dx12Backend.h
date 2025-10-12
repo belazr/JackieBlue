@@ -1,8 +1,7 @@
 #pragma once
-#include "dx12DrawBuffer.h"
+#include "dx12FrameData.h"
 #include "..\..\IBackend.h"
-#include "..\..\Vertex.h"
-#include <d3d12.h>
+#include "..\..\..\Vector.h"
 #include <dxgi1_4.h>
 
 // Class for drawing within a DirectX 12 Present hook.
@@ -38,39 +37,46 @@ namespace hax {
 
 			class Backend : public IBackend {
 			private:
-				typedef struct ImageData {
-					ID3D12CommandAllocator* pCommandAllocator;
-					DrawBuffer triangleListBuffer;
-					DrawBuffer pointListBuffer;
-					HANDLE hEvent;
-				}ImageData;
-
 				IDXGISwapChain3* _pSwapChain;
 				ID3D12CommandQueue* _pCommandQueue;
 
 				HWND _hMainWindow;
 				ID3D12Device* _pDevice;
-				ID3D12DescriptorHeap* _pRtvDescriptorHeap;
-				D3D12_CPU_DESCRIPTOR_HANDLE _hRtvHeapStartDescriptor;
-				ID3D12RootSignature* _pRootSignature;
-				ID3D12PipelineState* _pTriangleListPipelineState;
-				ID3D12PipelineState* _pPointListPipelineState;
-				ID3D12Fence* _pFence;
+				ID3D12CommandAllocator* _pTextureCommandAllocator;
+				ID3D12GraphicsCommandList* _pTextureCommandList;
 				ID3D12GraphicsCommandList* _pCommandList;
+				ID3D12DescriptorHeap* _pRtvDescriptorHeap;
+				ID3D12DescriptorHeap* _pSrvDescriptorHeap;
+				D3D12_CPU_DESCRIPTOR_HANDLE _hRtvHeapStartDescriptor;
+				D3D12_CPU_DESCRIPTOR_HANDLE _hSrvHeapStartCpuDescriptor;
+				D3D12_GPU_DESCRIPTOR_HANDLE _hSrvHeapStartGpuDescriptor;
+				UINT _srvHeapDescriptorIncrementSize;
+				ID3D12RootSignature* _pRootSignature;
+				ID3D12PipelineState* _pPipelineState;
+				ID3D12Fence* _pFence;
 				ID3D12Resource* _pRtvResource;
 				D3D12_VIEWPORT _viewport;
 
-				ImageData* _pImageDataArray;
-				uint32_t _imageCount;
+				Vector<FrameData> _frameDataVector;
 				UINT _curBackBufferIndex;
-				ImageData* _pCurImageData;
+				FrameData* _pCurFrameData;
+
+				Vector<ID3D12Resource*> _textures;
 
 			public:
 				Backend();
 
+				Backend(Backend&&) = delete;
+
+				Backend(const Backend&) = delete;
+
+				Backend& operator=(Backend&&) = delete;
+
+				Backend& operator=(const Backend&) = delete;
+
 				~Backend();
 
-				// Initializes backend and starts a frame within a hook. Should be called by an Engine object.
+				// Sets the parameters of the current call of the hooked function.
 				//
 				// Parameters:
 				// 
@@ -79,13 +85,30 @@ namespace hax {
 				//
 				// [in] pArg2:
 				// Pass the ID3D12CommandQueue* that was retrieved by dx12::getInitData().
-				virtual void setHookArguments(void* pArg1 = nullptr, void* pArg2 = nullptr) override;
+				virtual void setHookParameters(void* pArg1 = nullptr, void* pArg2 = nullptr) override;
 
 				// Initializes the backend. Should be called by an Engine object until success.
 				// 
 				// Return:
 				// True on success, false on failure.
 				virtual bool initialize() override;
+
+				// Loads a texture into VRAM.
+				//
+				// Parameters:
+				// 
+				// [in] data:
+				// Texture colors in argb format.
+				// 
+				// [in] width:
+				// Width of the texture.
+				// 
+				// [in] height:
+				// Height of the texture.
+				//
+				// Return:
+				// ID of the internal texture structure in VRAM that can be passed to DrawBuffer::append. 0 on failure.
+				virtual TextureId loadTexture(const Color* data, uint32_t width, uint32_t height) override;
 
 				// Starts a frame within a hook. Should be called by an Engine object every frame at the beginning of the hook.
 				// 
@@ -96,17 +119,11 @@ namespace hax {
 				// Ends the current frame within a hook. Should be called by an Engine object every frame at the end of the hook.
 				virtual void endFrame() override;
 
-				// Gets a reference to the triangle list buffer of the backend. It is the responsibility of the backend to dispose of the buffer properly.
+				// Gets a pointer to the buffer backend. It is the responsibility of the backend to dispose of the buffer backend properly.
 				// 
 				// Return:
-				// Pointer to the triangle list buffer.
-				virtual AbstractDrawBuffer* getTriangleListBuffer() override;
-
-				// Gets a reference to the point list buffer of the backend. It is the responsibility of the backend to dispose of the buffer properly.
-				// 
-				// Return:
-				// Pointer to the point list buffer.
-				virtual AbstractDrawBuffer* getPointListBuffer() override;
+				// Pointer to the buffer backend.
+				virtual IBufferBackend* getBufferBackend() override;
 
 				// Gets the resolution of the current frame. Should be called by an Engine object.
 				//
@@ -117,17 +134,18 @@ namespace hax {
 				//
 				// [out] frameHeight:
 				// Pointer that receives the current frame height in pixel.
-				virtual void getFrameResolution(float* frameWidth, float* frameHeight) override;
+				virtual void getFrameResolution(float* frameWidth, float* frameHeight) const override;
 
 			private:
-				bool createDescriptorHeap();
+				ID3D12GraphicsCommandList* createCommandList() const;
+				bool createDescriptorHeaps();
 				bool createRootSignature();
-				ID3D12PipelineState* createPipelineState(D3D12_PRIMITIVE_TOPOLOGY_TYPE topology) const;
-				bool createImageDataArray(uint32_t imageCount);
-				void destroyImageDataArray();
-				void destroyImageData(ImageData* pImageData) const;
+				bool createPipelineState();
+				bool uploadTexture(ID3D12Resource* pTexture, ID3D12Resource* pBuffer, uint32_t width, uint32_t height, uint32_t pitch) const;
+				bool resizeFrameDataVector(UINT size);
 				bool createRenderTargetView(DXGI_FORMAT format);
 				bool getCurrentViewport(D3D12_VIEWPORT* pViewport) const;
+				void setVertexShaderConstants() const;
 			};
 
 		}

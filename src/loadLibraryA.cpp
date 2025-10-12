@@ -19,19 +19,19 @@ namespace loadLib {
 		// loads dll to memory to check compatibility
 		hax::FileLoader dllLoader = hax::FileLoader(dllPath);
 
-		if (dllLoader.getErrno()) {
-			io::printFileError("Failed to open file.", dllLoader.getErrno());
+		if (dllLoader.lastErrno()) {
+			io::printFileError("Failed to open file.", dllLoader.lastErrno());
 
 			return false;
 		}
 
-		if (!dllLoader.readBytes() || dllLoader.getErrno()) {
-			io::printFileError("Failed to write file to memory.", dllLoader.getErrno());
+		if (!dllLoader.readBytes() || dllLoader.lastErrno()) {
+			io::printFileError("Failed to write file to memory.", dllLoader.lastErrno());
 
 			return false;
 		}
 
-		BYTE* const pDllBytes = dllLoader.getBytes();
+		BYTE* const pDllBytes = dllLoader.data();
 		hax::proc::PeHeaders headers{};
 
 		if (!hax::proc::in::getPeHeaders(reinterpret_cast<HMODULE>(pDllBytes), &headers)) {

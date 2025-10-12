@@ -1,7 +1,7 @@
 #pragma once
-#include "vkDrawBuffer.h"
-#include "..\Vertex.h"
+#include "vkFrameData.h"
 #include "..\IBackend.h"
+#include "..\..\Vector.h"
 #include <Windows.h>
 
 namespace hax {
@@ -19,16 +19,14 @@ namespace hax {
 
 			class Backend : public IBackend {
 			private:
-				typedef struct ImageData {
-					VkCommandBuffer hCommandBuffer;
+				typedef struct TextureData {
+					VkImage hImage;
+					VkDeviceMemory hMemory;
 					VkImageView hImageView;
-					VkFramebuffer hFrameBuffer;
-					DrawBuffer triangleListBuffer;
-					DrawBuffer pointListBuffer;
-					VkFence hFence;
-				}ImageData;
+					VkDescriptorSet hDescriptorSet;
+				}TextureData;
 
-				const VkPresentInfoKHR* _phPresentInfo;
+				const VkPresentInfoKHR* _pPresentInfo;
 				VkDevice _hDevice;
 
 				HMODULE _hVulkan;
@@ -39,45 +37,70 @@ namespace hax {
 					void* _fPtrs[sizeof(Functions) / sizeof(void*)];
 				};
 
-				uint32_t _graphicsQueueFamilyIndex;
 				VkRenderPass _hRenderPass;
-				VkCommandPool _hCommandPool;
-				VkPipelineLayout _hPipelineLayout;
-				VkPipeline _hTriangleListPipeline;
-				VkPipeline _hPointListPipeline;
+				uint32_t _graphicsQueueFamilyIndex;
 				VkPhysicalDeviceMemoryProperties _memoryProperties;
+				VkCommandPool _hCommandPool;
+				VkCommandBuffer _hTextureCommandBuffer;
+				VkSampler _hTextureSampler;
+				VkDescriptorPool _hDescriptorPool;
+				VkDescriptorSetLayout _hDescriptorSetLayout;
+				VkPipelineLayout _hPipelineLayout;
+				VkPipeline _hPipeline;
 				VkQueue _hFirstGraphicsQueue;
 				VkViewport _viewport;
 
-				ImageData* _pImageDataArray;
-				uint32_t _imageCount;
-				ImageData* _pCurImageData;
+				Vector<FrameData> _frameDataVector;
+				FrameData* _pCurFrameData;
 
+				Vector<TextureData> _textures;
 
 			public:
 				Backend();
 
+				Backend(Backend&&) = delete;
+
+				Backend(const Backend&) = delete;
+
+				Backend& operator=(Backend&&) = delete;
+
+				Backend& operator=(const Backend&) = delete;
+
 				~Backend();
 
-				// Sets the arguments of the current call of the hooked function.
+				// Sets the parameters of the current call of the hooked function.
 				//
 				// Parameters:
 				// 
-				// [in] pArg1:
-				// Pass the VkQueue.
-				//
 				// [in] pArg2:
 				// Pass the VkPresentInfoKHR*.
 				//
-				// [in] pArg3:
-				// Pass the device handle that was retrieved by vk::getInitData().
-				virtual void setHookArguments(void* pArg1 = nullptr, void* pArg2 = nullptr) override;
+				// [in] pArg2:
+				// Pass the VkDevice that was retrieved by vk::getInitData().
+				virtual void setHookParameters(void* pArg1 = nullptr, void* pArg2 = nullptr) override;
 
 				// Initializes the backend. Should be called by an Engine object until success.
 				// 
 				// Return:
 				// True on success, false on failure.
 				virtual bool initialize() override;
+
+				// Loads a texture into VRAM.
+				//
+				// Parameters:
+				// 
+				// [in] data:
+				// Texture colors in argb format.
+				// 
+				// [in] width:
+				// Width of the texture.
+				// 
+				// [in] height:
+				// Height of the texture.
+				//
+				// Return:
+				// ID of the internal texture structure in VRAM that can be passed to DrawBuffer::append. 0 on failure.
+				virtual TextureId loadTexture(const Color* data, uint32_t width, uint32_t height) override;
 
 				// Starts a frame within a hook. Should be called by an Engine object every frame at the begin of the hook.
 				// 
@@ -88,17 +111,11 @@ namespace hax {
 				// Ends the current frame within a hook. Should be called by an Engine object every frame at the end of the hook.
 				virtual void endFrame() override;
 
-				// Gets a reference to the triangle list buffer of the backend. It is the responsibility of the backend to dispose of the buffer properly.
+				// Gets a pointer to the buffer backend. It is the responsibility of the backend to dispose of the buffer backend properly.
 				// 
 				// Return:
-				// Pointer to the triangle list buffer.
-				virtual AbstractDrawBuffer* getTriangleListBuffer() override;
-
-				// Gets a reference to the point list buffer of the backend. It is the responsibility of the backend to dispose of the buffer properly.
-				// 
-				// Return:
-				// Pointer to the point list buffer.
-				virtual AbstractDrawBuffer* getPointListBuffer() override;
+				// Pointer to the buffer backend.
+				virtual IBufferBackend* getBufferBackend() override;
 
 				// Gets the resolution of the current frame. Should be called by an Engine object.
 				//
@@ -109,25 +126,33 @@ namespace hax {
 				//
 				// [out] frameHeight:
 				// Pointer that receives the current frame height in pixel.
-				virtual void getFrameResolution(float* frameWidth, float* frameHeight) override;
+				virtual void getFrameResolution(float* frameWidth, float* frameHeight) const override;
 
 			private:
 				bool getProcAddresses();
-				bool getPhysicalDeviceProperties();
 				bool createRenderPass();
+				bool getPhysicalDeviceProperties();
 				bool createCommandPool();
+				VkCommandBuffer allocCommandBuffer() const;
+				bool createTextureSampler();
+				bool createDescriptorPool();
+				bool createDescriptorSetLayout();
 				bool createPipelineLayout();
-				VkDescriptorSetLayout createDescriptorSetLayout() const;
-				VkPipeline createPipeline(VkPrimitiveTopology topology) const;
-				VkShaderModule createShaderModule(const BYTE shader[], size_t size) const;
-				bool createImageDataArray(uint32_t imageCount);
-				void destroyImageDataArray();
-				void destroyImageData(ImageData* pImageData) const;
+				bool createPipeline();
+				VkShaderModule createShaderModule(const unsigned char* pShader, size_t size) const;
+				VkImage createImage(uint32_t width, uint32_t height) const;
+				void destroyTextureData(TextureData* pTextureData) const;
+				VkDeviceMemory allocateMemory(const VkMemoryRequirements* pRequirements, VkMemoryPropertyFlagBits properties) const;
+				VkImageView createImageView(VkImage hImage) const;
+				VkDescriptorSet createDescriptorSet(VkImageView hImageView) const;
+				VkBuffer createBuffer(VkDeviceSize size) const;
+				bool uploadImage(VkImage hImage, VkBuffer hBuffer, uint32_t width, uint32_t height) const;
 				bool getCurrentViewport(VkViewport* pViewport) const;
-				bool createFramebuffers(VkViewport viewport);
-				void destroyFramebuffers();
+				bool viewportChanged(const VkViewport* pViewport) const ;
+				bool resizeFrameDataVector(uint32_t size, VkViewport viewport);
 				bool beginCommandBuffer(VkCommandBuffer hCommandBuffer) const;
 				void beginRenderPass(VkCommandBuffer hCommandBuffer, VkFramebuffer hFramebuffer) const;
+				void setVertexShaderConstants() const;
 			};
 
 		}

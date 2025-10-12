@@ -1,8 +1,7 @@
 #pragma once
-#include "ogl2Defs.h"
-#include "ogl2DrawBuffer.h"
-#include "..\Vertex.h"
+#include "ogl2BufferBackend.h"
 #include "..\IBackend.h"
+#include "..\..\Vector.h"
 
 // Class for drawing with OpenGL 2.
 // All methods are intended to be called by an Engine object and not for direct calls.
@@ -16,23 +15,41 @@ namespace hax {
 
 			class Backend : public IBackend {
 			private:
-
 				union {
 					Functions _f;
 					void* _fPtrs[sizeof(Functions) / sizeof(void*)];
 				};
 
-				GLint _viewport[4];
-				GLenum _depthFunc;
+				typedef struct State {
+					GLuint shaderProgramId;
+					GLuint vertexBufferId;
+					GLuint indexBufferId;
+					GLuint textureId;
+				}State;
 
-				DrawBuffer _triangleListBuffer;
-				DrawBuffer _pointListBuffer;
+				GLuint _shaderProgramId;
+				GLuint _projectionMatrixIndex;
+				BufferBackend _bufferBackend;
+				GLint _viewport[4];
+
+				State _state;
+
+				Vector<GLuint> _textures;
 
 			public:
 				Backend();
+
+				Backend(Backend&&) = delete;
+
+				Backend(const Backend&) = delete;
+
+				Backend& operator=(Backend&&) = delete;
+
+				Backend& operator=(const Backend&) = delete;
+
 				~Backend();
 
-				// Initializes backend and starts a frame within a hook. Should be called by an Engine object.
+				// Sets the parameters of the current call of the hooked function.
 				//
 				// Parameters:
 				// 
@@ -41,13 +58,30 @@ namespace hax {
 				//
 				// [in] pArg2:
 				// Pass nothing
-				virtual void setHookArguments(void* pArg1 = nullptr, void* pArg2 = nullptr) override;
+				virtual void setHookParameters(void* pArg1 = nullptr, void* pArg2 = nullptr) override;
 
 				// Initializes the backend. Should be called by an Engine object until success.
 				// 
 				// Return:
 				// True on success, false on failure.
 				virtual bool initialize() override;
+				
+				// Loads a texture into VRAM.
+				//
+				// Parameters:
+				// 
+				// [in] data:
+				// Texture colors in argb format.
+				// 
+				// [in] width:
+				// Width of the texture.
+				// 
+				// [in] height:
+				// Height of the texture.
+				//
+				// Return:
+				// ID of the internal texture structure in VRAM that can be passed to DrawBuffer::append. 0 on failure.
+				virtual TextureId loadTexture(const Color* data, uint32_t width, uint32_t height) override;
 
 				// Starts a frame within a hook. Should be called by an Engine object every frame at the begin of the hook.
 				// 
@@ -58,17 +92,11 @@ namespace hax {
 				// Ends the current frame within a hook. Should be called by an Engine object every frame at the end of the hook.
 				virtual void endFrame() override;
 
-				// Gets a reference to the triangle list buffer of the backend. It is the responsibility of the backend to dispose of the buffer properly.
+				// Gets a pointer to the buffer backend. It is the responsibility of the backend to dispose of the buffer backend properly.
 				// 
 				// Return:
-				// Pointer to the triangle list buffer.
-				virtual AbstractDrawBuffer* getTriangleListBuffer() override;
-
-				// Gets a reference to the point list buffer of the backend. It is the responsibility of the backend to dispose of the buffer properly.
-				// 
-				// Return:
-				// Pointer to the point list buffer.
-				virtual AbstractDrawBuffer* getPointListBuffer() override;
+				// Pointer to the buffer backend.
+				virtual IBufferBackend* getBufferBackend() override;
 
 				// Gets the resolution of the current frame. Should be called by an Engine object.
 				//
@@ -79,10 +107,17 @@ namespace hax {
 				//
 				// [out] frameHeight:
 				// Pointer that receives the current frame height in pixel.
-				virtual void getFrameResolution(float* frameWidth, float* frameHeight) override;
+				virtual void getFrameResolution(float* frameWidth, float* frameHeight) const override;
 
 			private:
 				bool getProcAddresses();
+				void createShaderPrograms();
+				GLuint createShader(GLenum type, const GLchar* pShader) const;
+				GLuint createShaderProgram(GLuint vertexShaderId, GLuint fragmentShaderId) const;
+				bool viewportChanged(const GLint* pViewport) const;
+				void setVertexShaderConstants() const;
+				void saveState();
+				void restoreState() const;
 			};
 
 		}
