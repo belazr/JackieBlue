@@ -1,8 +1,7 @@
 #pragma once
-#include "dx11DrawBuffer.h"
+#include "dx11BufferBackend.h"
 #include "..\..\IBackend.h"
-#include "..\..\Vertex.h"
-#include <d3d11.h>
+#include "..\..\..\Vector.h"
 
 // Class for drawing within a DirectX 11 Present hook.
 // All methods are intended to be called by an Engine object and not for direct calls.
@@ -32,26 +31,71 @@ namespace hax {
 
 			class Backend : public IBackend {
 			private:
+				typedef struct State {
+					D3D11_VIEWPORT viewports[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+					UINT viewportCount;
+					ID3D11RenderTargetView* pRenderTargetView;
+					ID3D11DepthStencilView* pDepthStencilView;
+					ID3D11InputLayout* pInputLayout;
+					ID3D11VertexShader* pVertexShader;
+					ID3D11ClassInstance* vsInstances[256];
+					UINT vsInstancesCount;
+					ID3D11Buffer* pConstantBuffer;
+					ID3D11SamplerState* pSamplerState;
+					ID3D11BlendState* pBlendState;
+					FLOAT blendFactor[4];
+					UINT sampleMask;
+					D3D11_PRIMITIVE_TOPOLOGY topology;
+					ID3D11PixelShader* pPixelShader;
+					ID3D11ClassInstance* psInstances[256];
+					UINT psInstancesCount;
+					ID3D11Buffer* pVertexBuffer;
+					UINT stride;
+					UINT offsetVtx;
+					ID3D11Buffer* pIndexBuffer;
+					DXGI_FORMAT format;
+					UINT offsetIdx;
+					ID3D11ShaderResourceView* pShaderResourceView;
+				}State;
+
+				typedef struct TextureData {
+					ID3D11Texture2D* pTexture;
+					ID3D11ShaderResourceView* pTextureView;
+				}TextureData;
+
 				IDXGISwapChain* _pSwapChain;
 
 				ID3D11Device* _pDevice;
 				ID3D11DeviceContext* _pContext;
+				ID3D11InputLayout* _pInputLayout;
 				ID3D11VertexShader* _pVertexShader;
-				ID3D11InputLayout* _pVertexLayout;
 				ID3D11PixelShader* _pPixelShader;
-				ID3D11RenderTargetView* _pRenderTargetView;
 				ID3D11Buffer* _pConstantBuffer;
+				ID3D11SamplerState* _pSamplerState;
+				ID3D11BlendState* _pBlendState;
 				D3D11_VIEWPORT _viewport;
+				ID3D11RenderTargetView* _pRenderTargetView;
+
+				State _state;
 				
-				DrawBuffer _triangleListBuffer;
-				DrawBuffer _pointListBuffer;
+				BufferBackend _bufferBackend;
+
+				Vector<TextureData> _textures;
 
 			public:
 				Backend();
 
+				Backend(Backend&&) = delete;
+
+				Backend(const Backend&) = delete;
+
+				Backend& operator=(Backend&&) = delete;
+
+				Backend& operator=(const Backend&) = delete;
+
 				~Backend();
 
-				// Initializes backend and starts a frame within a hook. Should be called by an Engine object.
+				// Sets the parameters of the current call of the hooked function.
 				//
 				// Parameters:
 				// 
@@ -60,13 +104,30 @@ namespace hax {
 				//
 				// [in] pArg2:
 				// Pass nothing
-				virtual void setHookArguments(void* pArg1 = nullptr, void* pArg2 = nullptr) override;
+				virtual void setHookParameters(void* pArg1 = nullptr, void* pArg2 = nullptr) override;
 
 				// Initializes the backend. Should be called by an Engine object until success.
 				// 
 				// Return:
 				// True on success, false on failure.
 				virtual bool initialize() override;
+
+				// Loads a texture into VRAM.
+				//
+				// Parameters:
+				// 
+				// [in] data:
+				// Texture colors in argb format.
+				// 
+				// [in] width:
+				// Width of the texture.
+				// 
+				// [in] height:
+				// Height of the texture.
+				//
+				// Return:
+				// ID of the internal texture structure in VRAM that can be passed to DrawBuffer::append. 0 on failure.
+				virtual TextureId loadTexture(const Color* texture, uint32_t width, uint32_t height);
 
 				// Starts a frame within a hook. Should be called by an Engine object every frame at the begin of the hook.
 				// 
@@ -77,17 +138,11 @@ namespace hax {
 				// Ends the current frame within a hook. Should be called by an Engine object every frame at the end of the hook.
 				virtual void endFrame() override;
 
-				// Gets a reference to the triangle list buffer of the backend. It is the responsibility of the backend to dispose of the buffer properly.
+				// Gets a pointer to the buffer backend. It is the responsibility of the backend to dispose of the buffer backend properly.
 				// 
 				// Return:
-				// Pointer to the triangle list buffer.
-				virtual AbstractDrawBuffer* getTriangleListBuffer() override;
-
-				// Gets a reference to the point list buffer of the backend. It is the responsibility of the backend to dispose of the buffer properly.
-				// 
-				// Return:
-				// Pointer to the point list buffer.
-				virtual AbstractDrawBuffer* getPointListBuffer() override;
+				// Pointer to the buffer backend.
+				virtual IBufferBackend* getBufferBackend()  override;
 
 				// Gets the resolution of the current frame. Should be called by an Engine object.
 				//
@@ -98,13 +153,20 @@ namespace hax {
 				//
 				// [out] frameHeight:
 				// Pointer that receives the current frame height in pixel.
-				virtual void getFrameResolution(float* frameWidth, float* frameHeight) override;
+				virtual void getFrameResolution(float* frameWidth, float* frameHeight) const override;
 
 			private:
+				bool createInputLayout();
 				bool createShaders();
 				bool createConstantBuffer();
-				bool getCurrentViewport(D3D11_VIEWPORT* pViewport) const;
-				bool updateConstantBuffer(D3D11_VIEWPORT viewport) const;
+				bool createSamplerState();
+				bool createBlendState();
+				bool getViewport(D3D11_VIEWPORT* pViewport) const;
+				bool viewportChanged(const D3D11_VIEWPORT* pViewport) const;
+				bool setVertexShaderConstants() const;
+				void saveState();
+				void restoreState();
+				void releaseState();
 			};
 
 		}

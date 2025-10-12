@@ -1,10 +1,9 @@
 #pragma once
-#include "dx9DrawBuffer.h"
+#include "dx9BufferBackend.h"
 #include "..\..\IBackend.h"
-#include "..\..\Vertex.h"
-#include <d3d9.h>
+#include "..\..\..\Vector.h"
 
-// Class for drawing within a DirectX 9 EndScene hook.
+// Class for drawing within a DirectX 9 Present hook.
 // All methods are intended to be called by an Engine object and not for direct calls.
 
 namespace hax {
@@ -13,14 +12,14 @@ namespace hax {
 
 		namespace dx9 {
 
-			typedef HRESULT(APIENTRY* tEndScene)(LPDIRECT3DDEVICE9 _pDevice);
+			typedef HRESULT(APIENTRY* tPresent)(LPDIRECT3DDEVICE9 pDevice, const RECT* pSourceRect, const RECT* pDestRect, HWND hDestWindowOverride, const RGNDATA* pDirtyRegion);
 
 			// Gets a copy of the vTable of the DirectX 9 device used by the caller process.
 			// 
 			// Parameter:
 			// 
 			// [out] pDeviceVTable:
-			// Contains the devices vTable on success. See the d3d9 header for the offset of the EndScene function (typically 42).
+			// Contains the devices vTable on success. See the d3d9 header for the offset of the Present function (typically 17).
 			// 
 			// [in] size:
 			// Size of the memory allocated at the address pointed to by pDeviceVTable.
@@ -32,21 +31,44 @@ namespace hax {
 
 			class Backend : public IBackend {
 			private:
-				IDirect3DDevice9* _pDevice;
+				typedef struct State {
+					IDirect3DStateBlock9* pStateBlock;
+					IDirect3DVertexDeclaration9* pVertexDeclaration;
+					IDirect3DVertexShader9* pVertexShader;
+					IDirect3DPixelShader9* pPixelShader;
+					IDirect3DVertexBuffer9* pVertexBuffer;
+					UINT offset;
+					UINT stride;
+					IDirect3DIndexBuffer9* pIndexBuffer;
+					IDirect3DBaseTexture9* pBaseTexture;
+				}State;
 
-				IDirect3DVertexDeclaration9* _pOriginalVertexDeclaration;
+				IDirect3DDevice9* _pDevice;
 				IDirect3DVertexDeclaration9* _pVertexDeclaration;
+				IDirect3DVertexShader9* _pVertexShader;
+				IDirect3DPixelShader9* _pPixelShader;
 				D3DVIEWPORT9 _viewport;
 
-				DrawBuffer _triangleListBuffer;
-				DrawBuffer _pointListBuffer;
+				State _state;
+
+				BufferBackend _bufferBackend;
+
+				Vector<IDirect3DTexture9*> _textures;
 
 			public:
 				Backend();
 
+				Backend(Backend&&) = delete;
+
+				Backend(const Backend&) = delete;
+
+				Backend& operator=(Backend&&) = delete;
+
+				Backend& operator=(const Backend&) = delete;
+
 				~Backend();
 
-				// Initializes backend and starts a frame within a hook. Should be called by an Engine object.
+				// Sets the parameters of the current call of the hooked function.
 				//
 				// Parameters:
 				// 
@@ -55,13 +77,30 @@ namespace hax {
 				//
 				// [in] pArg2:
 				// Pass nothing
-				virtual void setHookArguments(void* pArg1 = nullptr, void* pArg2 = nullptr) override;
+				virtual void setHookParameters(void* pArg1 = nullptr, void* pArg2 = nullptr) override;
 
 				// Initializes the backend. Should be called by an Engine object until success.
 				// 
 				// Return:
 				// True on success, false on failure.
 				virtual bool initialize() override;
+
+				// Loads a texture into VRAM.
+				//
+				// Parameters:
+				// 
+				// [in] data:
+				// Texture colors in argb format.
+				// 
+				// [in] width:
+				// Width of the texture.
+				// 
+				// [in] height:
+				// Height of the texture.
+				//
+				// Return:
+				// ID of the internal texture structure in VRAM that can be passed to DrawBuffer::append. 0 on failure.
+				TextureId loadTexture(const Color* data, uint32_t width, uint32_t height) override;
 
 				// Starts a frame within a hook. Should be called by an Engine object every frame at the begin of the hook.
 				// 
@@ -72,17 +111,11 @@ namespace hax {
 				// Ends the current frame within a hook. Should be called by an Engine object every frame at the end of the hook.
 				virtual void endFrame() override;
 
-				// Gets a reference to the triangle list buffer of the backend. It is the responsibility of the backend to dispose of the buffer properly.
+				// Gets a pointer to the buffer backend. It is the responsibility of the backend to dispose of the buffer backend properly.
 				// 
 				// Return:
-				// Pointer to the triangle list buffer.
-				virtual AbstractDrawBuffer* getTriangleListBuffer() override;
-
-				// Gets a reference to the point list buffer of the backend. It is the responsibility of the backend to dispose of the buffer properly.
-				// 
-				// Return:
-				// Pointer to the point list buffer.
-				virtual AbstractDrawBuffer* getPointListBuffer() override;
+				// Pointer to the buffer backend.
+				virtual IBufferBackend* getBufferBackend()  override;
 
 				// Gets the resolution of the current frame. Should be called by an Engine object.
 				//
@@ -93,7 +126,15 @@ namespace hax {
 				//
 				// [out] frameHeight:
 				// Pointer that receives the current frame height in pixel.
-				virtual void getFrameResolution(float* frameWidth, float* frameHeight) override;
+				virtual void getFrameResolution(float* frameWidth, float* frameHeight) const override;
+
+			private:
+				bool createVertexDeclaration();
+				bool createShaders();
+				bool saveState();
+				void restoreState();
+				void releaseState();
+				bool setVertexShaderConstants();
 
 			};
 
