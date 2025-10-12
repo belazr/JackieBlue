@@ -167,6 +167,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\ctrl.cpp" />
     <ClCompile Include="src\io.cpp" />
     <ClCompile Include="src\loadLibraryA.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -174,6 +175,7 @@
     <ClCompile Include="src\unlinkDll.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\ctrl.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\loadLibraryA.h" />
     <ClInclude Include="src\io.h" />

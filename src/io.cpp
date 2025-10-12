@@ -4,6 +4,7 @@
 #include <iomanip>
 
 namespace io {
+	
 	static constexpr char HEADER[]{
 		"    /$$$$$                     /$$       /$$           /$$$$$$$  /$$                    \n"
 		"   |__  $$                    | $$      |__/          | $$__  $$| $$                    \n"
@@ -451,6 +452,7 @@ namespace io {
 			if (!input.empty()) {
 				*pTargetInfo = input;
 			}
+
 		} while (pTargetInfo->empty());
 
 		SetConsoleCursorPosition(hStdOut, cursorCur);
