@@ -24,6 +24,9 @@ The x64 binary is able to handle x86 as well as x64 targets.
 
 This project was created for personal use, learning purposes and fun.
 
+## Screnshot
+<img width="834" height="417" alt="screenshot" src="https://github.com/user-attachments/assets/b7e0f634-4c28-4b1e-82b6-21fb4ca1135f" />
+
 ## Requirements
 - Windows 10/11 64bit
 - Visual Studio
