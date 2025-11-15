@@ -1,0 +1,8 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="JackieBlue.vcxproj" Id="5affedab-1a54-4e84-aa86-84ab7980b847" />
+  <Project Path="Proxy/Proxy.vcxproj" Id="d519275e-03ae-41dd-9e5d-f6b59cef595a" />
+</Solution>
