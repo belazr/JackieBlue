@@ -23,8 +23,6 @@ This option is available for both injection methods and module unlinking.
 The x64 binary is able to handle x86 as well as x64 targets.
 
 This project was created for personal use, learning purposes and fun.
-# Screenshot
-![alt text](https://github.com/belazr/JackieBlue/blob/master/res/screenshot.png?raw=true)
 
 ## Requirements
 - Windows 10/11 64bit
