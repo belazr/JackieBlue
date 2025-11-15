@@ -35,9 +35,9 @@ This project was created for personal use, learning purposes and fun.
 
 Build tested with:
 - Windows 11 64bit
-- Visual Studio 17
-- MSVC v143
-- Windows 11 SDK (10.0.26100)
+- Visual Studio 18
+- MSVC v145
+- Windows 11 SDK (10.0.26200)
 
 Usage tested with:
 - Windows 11 64bit
