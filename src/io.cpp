@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <unordered_map>
 
 namespace io {
 	
@@ -154,7 +155,7 @@ namespace io {
 	}
 
 
-	void printProcessIdMenu(const std::vector<DWORD>& procIds) {
+	void printProcessIdMenu(const hax::Vector<DWORD>& procIds) {
 		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
 
 		printMenuItem("Select process ID:");
@@ -178,7 +179,7 @@ namespace io {
 				menuItem += " ";
 			}
 
-			menuItem += " " + std::to_string(procIds.at(i));
+			menuItem += " " + std::to_string(procIds[i]);
 
 			printMenuItem(menuItem);
 		}
