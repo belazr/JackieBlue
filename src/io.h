@@ -127,18 +127,9 @@ namespace io {
 	// 
 	// Parameters:
 	// [in] msg: Error message to be printed.
-	void printWinError(std::string msg);
-
-	// Prints an error message in red to the logging section including the last error of the hax::FileLoader class parsed as string.
-	// 
-	// Parameters:
-	// 
-	// [in] msg:
-	// Error message to be printed.
-	// 
-	// [in] errNo:
-	// The error number retrieved by hax::FileLoader::getError()
-	void printFileError(std::string msg, errno_t errNo);
+	//
+	// [in] winError: The WinError code that should be printed. If ERROR_SUCCESS is passed the function calls GetLastError() itself.
+	void printWinError(std::string msg, DWORD winError = ERROR_SUCCESS);
 
 	// Prints the code launch error message in red to the logging section including the status code returned by a launch function.
 	// 

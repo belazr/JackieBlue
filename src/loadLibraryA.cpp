@@ -5,43 +5,42 @@ namespace loadLib {
 	
 	bool inject(HANDLE hProc, const char* dllPath, hax::launch::tLaunchFunc pLaunchFunc) {
 		BOOL isWow64 = FALSE;
-		IsWow64Process(hProc, &isWow64);
+
+		if (!IsWow64Process(hProc, &isWow64)) {
+			io::printWinError("Failed to get architecture of target process.");
+
+			return false;
+		}
 		
 		#ifndef _WIN64
 
 		if (!isWow64) {
-			io::printPlainError("Can not inject into x64 process. Please use the x64 binary.");
+			io::printPlainError("Cannot inject into x64 process. Please use the x64 binary.");
 			return false;
 		}
 		
 		#endif // !_WIN64
 
-		// loads dll to memory to check compatibility
-		hax::FileLoader dllLoader = hax::FileLoader(dllPath);
+		hax::FileMapper dllMapper(dllPath);
+		const DWORD err = dllMapper.map();
 
-		if (dllLoader.lastErrno()) {
-			io::printFileError("Failed to open file.", dllLoader.lastErrno());
-
-			return false;
-		}
-
-		if (!dllLoader.readBytes() || dllLoader.lastErrno()) {
-			io::printFileError("Failed to write file to memory.", dllLoader.lastErrno());
+		if (err != ERROR_SUCCESS) {
+			io::printWinError("Failed to map DLL.", err);
 
 			return false;
 		}
 
-		BYTE* const pDllBytes = dllLoader.data();
+		const BYTE* const pImage = dllMapper.data();
 		hax::proc::PeHeaders headers{};
 
-		if (!hax::proc::in::getPeHeaders(reinterpret_cast<HMODULE>(pDllBytes), &headers)) {
+		if (!hax::proc::in::getPeHeaders(reinterpret_cast<HMODULE>(const_cast<BYTE*>(pImage)), &headers)) {
 			io::printPlainError("File format is not PE.");
 
 			return false;
 		}
 
 		if (isWow64 && headers.pOptHeader64 || !isWow64 && headers.pOptHeader32) {
-			io::printPlainError("Process and DLL architecture not compatible.");
+			io::printPlainError("DLL and target process architecture do not match.");
 
 			return false;
 		}
@@ -49,14 +48,13 @@ namespace loadLib {
 		void* const pDllPath = VirtualAllocEx(hProc, 0, MAX_PATH, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		
 		if (!pDllPath) {
-			io::printWinError("Failed to allocate memory in target process.");
+			io::printWinError("Failed to allocate memory for DLL path in target process.");
 			
 			return false;
 		}
 
-		// writes dll path to target process including terminating null character
 		if (!WriteProcessMemory(hProc, pDllPath, dllPath, strlen(dllPath) + 1, nullptr)) {
-			io::printWinError("Failed to write dll path to target process.");
+			io::printWinError("Failed to write DLL path to target process.");
 			VirtualFreeEx(hProc, pDllPath, 0, MEM_RELEASE);
 			
 			return false;
