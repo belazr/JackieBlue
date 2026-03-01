@@ -16,7 +16,7 @@ namespace ctrl {
 		io::printHeader();
 
 		if (procName.empty() || dllName.empty() || dllDir.empty()) {
-			io::selectTargets(&procName, &dllName, &dllDir);
+			io::selectTargets(procName, dllName, dllDir);
 		}
 
 		// defaults
@@ -28,20 +28,20 @@ namespace ctrl {
 			io::printHeader();
 			io::printTargetInfo(procName, dllName, dllDir);
 			io::printMainMenu(curAction);
-			io::selectAction(&curAction);
+			curAction = io::selectAction(curAction);
 
 			switch (curAction) {
 			case io::Action::LOAD_LIB:
 			case io::Action::MAN_MAP:
 				io::printLaunchMethodMenu(curAction, curLaunchMethod);
-				io::selectLaunchMethod(&curLaunchMethod);
+				curLaunchMethod = io::selectLaunchMethod(curLaunchMethod);
 			case io::Action::UNLINK:
 				io::printHandleCreationMenu(curAction, curHandleCreation);
-				io::selectHandleCreation(&curHandleCreation);
+				curHandleCreation = io::selectHandleCreation(curHandleCreation);
 				io::initLog();
 				break;
 			case io::Action::CHANGE_TARGETS:
-				io::selectTargets(&procName, &dllName, &dllDir);
+				io::selectTargets(procName, dllName, dllDir);
 				break;
 			default:
 				break;
@@ -117,7 +117,7 @@ namespace ctrl {
 
 		if (procIds.size() > 1) {
 			io::printProcessIdMenu(procIds);
-			io::selectProcessIdIndex(&targetProcIdIndex);
+			targetProcIdIndex = io::selectProcessIdIndex(targetProcIdIndex);
 		}
 
 		const DWORD procId = procIds.at(targetProcIdIndex);

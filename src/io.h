@@ -31,7 +31,7 @@ namespace io {
 	// 
 	// [in] dllDir:
 	// DLL parent directory.
-	void printTargetInfo(std::string procName, std::string dllName, std::string dllDir);
+	void printTargetInfo(const std::string& procName, const std::string& dllName, const std::string& dllDir);
 	
 	// Prints the main menu.
 	// 
@@ -75,50 +75,62 @@ namespace io {
 	// 
 	// Parameters:
 	// 
-	// [in/out] pAction:
-	// Action currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
-	void selectAction(Action* pAction);
+	// [in] current:
+	// Action currently selected.
+	//
+	// Return:
+	// Action selected by user or current action for invalid input.
+	Action selectAction(Action current);
 
 	// Lets the user select the launch method of the code to execute the injection.
 	// 
 	// Parameters:
 	// 
-	// [in/out] pSelect:
-	// Launch method currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
-	void selectLaunchMethod(LaunchMethod* pLaunchMethod);
+	// [in] current:
+	// Launch method currently selected.
+	//
+	// Return:
+	// Launch method selected by user or current launch method for invalid input.
+	LaunchMethod selectLaunchMethod(LaunchMethod current);
 
 	// Lets the user select the handle creation.
 	// 
 	// Parameters:
 	// 
-	// [in/out] pHandleCreation:
-	// Handle creation currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
-	void selectHandleCreation(HandleCreation* pHandleCreation);
+	// [in] current:
+	// Handle creation currently selected.
+	//
+	// Return:
+	// Handle creation selected by user or current handle creation for invalid input.
+	HandleCreation selectHandleCreation(HandleCreation current);
 
 	// Lets the user select the target process ID.
 	// 
 	// Parameters:
 	// 
-	// [in/out] pProcIdIndex:
-	// Index of process id currently selected. Only overwritten for valid user input. For invalid input it keeps its value.
-	void selectProcessIdIndex(size_t* pProcIdIndex);
+	// [in] current:
+	// Process ID currently selected.
+	//
+	// Return:
+	// Process ID selected by user or current process ID creation for invalid input.
+	size_t selectProcessIdIndex(size_t current);
 
 	// Lets the user select the targets.
 	// 
 	// Parameters:
 	// 
-	// [in/out] pProcName:
+	// [in/out] procName:
 	// Process image name currently selected. On user input this is the new process image name entered.
 	// If the user presses enter without entering anythin it keeps the value.
 	// 
-	// [in/out] pDllName:
+	// [in/out] dllName:
 	// Dll image name currently selected. On user input this is the new dll image name entered.
 	// If the user presses enter without entering anythin it keeps the value.
 	// 
-	// [in/out] pDllDir:
+	// [in/out] dllDir:
 	// DLL parent directory currently selected. On user input this is the new DLL parent directory entered.
 	// If the user presses enter without entering anythin it keeps the value.
-	void selectTargets(std::string* pProcName, std::string* pDllName, std::string* pDllDir);
+	void selectTargets(std::string& pProcName, std::string& pDllName, std::string& pDllDir);
 
 	// Clears the logging section and prints a seperator.
 	void initLog();
@@ -129,7 +141,7 @@ namespace io {
 	// [in] msg: Error message to be printed.
 	//
 	// [in] winError: The WinError code that should be printed. If ERROR_SUCCESS is passed the function calls GetLastError() itself.
-	void printWinError(std::string msg, DWORD winError = ERROR_SUCCESS);
+	void printWinError(const std::string& msg, DWORD winError = ERROR_SUCCESS);
 
 	// Prints the code launch error message in red to the logging section including the status code returned by a launch function.
 	// 
@@ -145,7 +157,7 @@ namespace io {
 	// 
 	// [in] msg:
 	// Error message to be printed.
-	void printPlainError(std::string msg);
+	void printPlainError(const std::string& msg);
 
 	// Prints an info message in white to the logging section.
 	// 
@@ -153,7 +165,7 @@ namespace io {
 	// 
 	// [in] msg:
 	// Info message to be printed.
-	void printInfo(std::string msg);
+	void printInfo(const std::string& msg);
 
 	// Prints a success message in green to the logging section.
 	// 
@@ -161,7 +173,7 @@ namespace io {
 	// 
 	// [in] msg:
 	// Success message to be printed.
-	void printSuccess(std::string msg);
+	void printSuccess(const std::string& msg);
 
 
 	// Prints the result message for an injection action.

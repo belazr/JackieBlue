@@ -87,9 +87,9 @@ namespace io {
 
 
 	static void clearConsole(COORD from, COORD to);
-	static void printMenuItem(std::string item);
+	static void printMenuItem(const std::string& item);
 	
-	void printTargetInfo(std::string procName, std::string dllName, std::string dllDir) {
+	void printTargetInfo(const std::string& procName, const std::string& dllName, const std::string& dllDir) {
 		clearConsole(cursorAfterHeader, cursorAfterTargetInfo);
 
 		printMenuItem(PROCESS_LABEL + procName);
@@ -104,7 +104,7 @@ namespace io {
 	
 	
 	template<typename Enum>
-	static std::string getMenuEntryString(Enum curEntry, const std::unordered_map<Enum, std::string>* pMap, bool isSelected);
+	static std::string getMenuEntryString(Enum curEntry, const std::unordered_map<Enum, std::string>& map, bool isSelected);
 
 	void printMainMenu(Action curAction) {
 		clearConsole(cursorAfterTargetInfo, cursorAfterSelect);
@@ -113,11 +113,11 @@ namespace io {
 
 		// print all options starting at the first non exit option
 		for (int i = Action::EXIT + 1; i < Action::MAX_ACTION; i++) {
-			printMenuItem(getMenuEntryString(static_cast<Action>(i), &actionLabels, i == curAction));
+			printMenuItem(getMenuEntryString(static_cast<Action>(i), actionLabels, i == curAction));
 		}
 
 		// print the exit option as last entry
-		printMenuItem(getMenuEntryString(Action::EXIT, &actionLabels, false));
+		printMenuItem(getMenuEntryString(Action::EXIT, actionLabels, false));
 		std::cout << std::endl;
 
 		return;
@@ -130,7 +130,7 @@ namespace io {
 		printMenuItem("Select launch method (" + actionLabels.at(curAction) + "):");
 
 		for (int i = LaunchMethod::CREATE_THREAD; i < LaunchMethod::MAX_LAUNCH_METHOD; i++) {
-			printMenuItem(getMenuEntryString(static_cast<LaunchMethod>(i), &launchMethodLabels, i == curLaunchMethod));
+			printMenuItem(getMenuEntryString(static_cast<LaunchMethod>(i), launchMethodLabels, i == curLaunchMethod));
 		}
 
 		std::cout << std::endl;
@@ -145,7 +145,7 @@ namespace io {
 		printMenuItem("Select handle creation (" + actionLabels.at(curAction) + "):");
 
 		for (int i = HandleCreation::OPEN_PROCESS; i < HandleCreation::MAX_HANDLE_CREATION; i++) {
-			printMenuItem(getMenuEntryString(static_cast<HandleCreation>(i), &handleCreationLabels, i == curHandleCreation));
+			printMenuItem(getMenuEntryString(static_cast<HandleCreation>(i), handleCreationLabels, i == curHandleCreation));
 		}
 
 		std::cout << std::endl;
@@ -191,60 +191,52 @@ namespace io {
 
 	static int getIntInput();
 	
-	void selectAction(Action* pAction) {
+	Action selectAction(Action current) {
 		const int input = getIntInput();
 
-		if (input < 0 || input >= Action::MAX_ACTION) return;
+		if (input < 0 || input >= Action::MAX_ACTION) return current;
 
-		*pAction = static_cast<Action>(input);
-
-		return;
+		return static_cast<Action>(input);
 	}
 
 
-	void selectLaunchMethod(LaunchMethod* pLaunchMethod) {
+	LaunchMethod selectLaunchMethod(LaunchMethod current) {
 		const int input = getIntInput();
 
-		if (input < 0 || input >= LaunchMethod::MAX_LAUNCH_METHOD) return;
+		if (input < 0 || input >= LaunchMethod::MAX_LAUNCH_METHOD) return current;
 
-		*pLaunchMethod = static_cast<LaunchMethod>(input);
-
-		return;
+		return static_cast<LaunchMethod>(input);
 	}
 
 
-	void selectHandleCreation(HandleCreation* pHandleCreation) {
+	HandleCreation selectHandleCreation(HandleCreation current) {
 		const int input = getIntInput();
 
-		if (input < 0 || input >= HandleCreation::MAX_HANDLE_CREATION) return;
+		if (input < 0 || input >= HandleCreation::MAX_HANDLE_CREATION) return current;
 
-		*pHandleCreation = static_cast<HandleCreation>(input);
-
-		return;
+		return static_cast<HandleCreation>(input);
 	}
 
 
-	void selectProcessIdIndex(size_t* pProcIdIndex) {
+	size_t selectProcessIdIndex(size_t current) {
 		const int input = getIntInput();
 
-		if (input < 1) return;
-
-		*pProcIdIndex = static_cast<DWORD>(input) - 1;
+		if (input < 1) return current;
 
 		SetConsoleCursorPosition(hStdOut, cursorAfterLog);
 
-		return;
+		return static_cast<size_t>(input) - 1;
 	}
 
 
-	static void getTargetInput(std::string info, std::string* pTargetInfo);
+	static void getTargetInput(const std::string& info, std::string& targetInfo);
 
-	void selectTargets(std::string* pProcName, std::string* pDllName, std::string* pDllDir) {
+	void selectTargets(std::string& procName, std::string& dllName, std::string& dllDir) {
 		clearConsole(cursorAfterHeader, cursorAfterTargetInfo);
 
-		getTargetInput(PROCESS_LABEL, pProcName);
-		getTargetInput(DLL_LABEL, pDllName);
-		getTargetInput(PATH_LABEL, pDllDir);
+		getTargetInput(PROCESS_LABEL, procName);
+		getTargetInput(DLL_LABEL, dllName);
+		getTargetInput(PATH_LABEL, dllDir);
 
 		return;
 	}
@@ -262,7 +254,7 @@ namespace io {
 	}
 
 
-	void printWinError(std::string msg, DWORD winError) {
+	void printWinError(const std::string& msg, DWORD winError) {
 		
 		if (winError == ERROR_SUCCESS) {
 			winError = GetLastError();
@@ -289,23 +281,23 @@ namespace io {
 	}
 
 
-	static void printLogText(std::string msg, const char* prefix, WORD attribute);
+	static void printLogText(const std::string&, const char* prefix, WORD attribute);
 
-	void printPlainError(std::string msg) {
+	void printPlainError(const std::string& msg) {
 		printLogText(msg, ERROR_PREFIX, FOREGROUND_RED);
 
 		return;
 	}
 
 
-	void printInfo(std::string msg) {
+	void printInfo(const std::string& msg) {
 		printLogText(msg, INFO_PREFIX, 0);
 
 		return;
 	}
 
 
-	void printSuccess(std::string msg) {
+	void printSuccess(const std::string& msg) {
 		printLogText(msg, SUCCESS_PREFIX, FOREGROUND_GREEN);
 
 		return;
@@ -384,10 +376,10 @@ namespace io {
 
 
 	template<typename Enum>
-	static std::string getMenuEntryString(Enum curEntry, const std::unordered_map<Enum, std::string>* pMap, bool isSelected) {
+	static std::string getMenuEntryString(Enum curEntry, const std::unordered_map<Enum, std::string>& map, bool isSelected) {
 		std::string strNum = std::to_string(curEntry);
 		std::string padding(4 - strNum.length(), ' ');
-		std::string entryString = padding + strNum + "  " + pMap->at(curEntry);
+		std::string entryString = padding + strNum + "  " + map.at(curEntry);
 
 		// number gets put in brackets [] if the action is selected
 		if (isSelected) {
@@ -399,7 +391,7 @@ namespace io {
 	}
 
 
-	static void printMenuItem(std::string msg) {
+	static void printMenuItem(const std::string& msg) {
 		std::cout << MENU_PREFIX << msg << std::endl;
 
 		return;
@@ -427,7 +419,7 @@ namespace io {
 	}
 
 	
-	static void getTargetInput(std::string label, std::string* pTargetInfo) {
+	static void getTargetInput(const std::string& label, std::string& targetInfo) {
 		COORD cursorCur = getCursorPosition();
 
 		// gets the targer input from user input until set
@@ -441,19 +433,19 @@ namespace io {
 
 			// current value is overwritten if users input is not empty
 			if (!input.empty()) {
-				*pTargetInfo = input;
+				targetInfo = input;
 			}
 
-		} while (pTargetInfo->empty());
+		} while (targetInfo.empty());
 
 		SetConsoleCursorPosition(hStdOut, cursorCur);
-		printMenuItem(label + *pTargetInfo);
+		printMenuItem(label + targetInfo);
 
 		return;
 	}
 
 
-	static void printLogText(std::string msg, const char* prefix, WORD attribute) {
+	static void printLogText(const std::string& msg, const char* prefix, WORD attribute) {
 		COORD start = getCursorPosition();
 
 		std::cout << prefix << msg;
