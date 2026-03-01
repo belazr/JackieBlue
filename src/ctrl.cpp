@@ -106,10 +106,10 @@ namespace ctrl {
 	}
 
 
-	static bool findProcIds(const std::string& procName, std::vector<DWORD>& procIds);
+	static bool findProcIds(const std::string& procName, hax::Vector<DWORD>& procIds);
 
 	static HANDLE getProcessHandle(const std::string& procName, io::HandleCreation curHandleCreation) {
-		std::vector<DWORD> procIds{};
+		hax::Vector<DWORD> procIds{};
 
 		if (!findProcIds(procName, procIds)) return nullptr;
 
@@ -120,7 +120,7 @@ namespace ctrl {
 			targetProcIdIndex = io::selectProcessIdIndex(targetProcIdIndex);
 		}
 
-		const DWORD procId = procIds.at(targetProcIdIndex);
+		const DWORD procId = procIds[targetProcIdIndex];
 
 		io::printInfo("Injecting into process with ID: " + std::to_string(procId) + ".");
 
@@ -147,7 +147,7 @@ namespace ctrl {
 	}
 
 
-	static bool findProcIds(const std::string& procName, std::vector<DWORD>& procIds) {
+	static bool findProcIds(const std::string& procName, hax::Vector<DWORD>& procIds) {
 		io::printInfo("Looking for processes with name: '" + procName + "'...");
 
 		size_t size = 0u;
@@ -166,37 +166,15 @@ namespace ctrl {
 			return false;
 		}
 
-		DWORD* pIds = new DWORD[size]{};
+		procIds.resize(size);
 
-		if (!pIds) {
-			io::printPlainError("Failed to allocate memory.");
-
-			return false;
-		}
-
-		size_t tmp = size;
-
-		if (!hax::proc::getProcessIds(procName.c_str(), pIds, &tmp) || !tmp) {
-			delete[] pIds;
+		if (!hax::proc::getProcessIds(procName.c_str(), procIds.data(), &size) || !size) {
 			io::printWinError("Failed to get process IDs.");
 
 			return false;
 		}
 
-		size_t processCount = 0;
-
-		for (size_t i = 0u; i < size; i++) {
-
-			if (pIds[i]) {
-				procIds.emplace_back(pIds[i]);
-				processCount++;
-			}
-
-		}
-
-		io::printInfo(std::to_string(processCount) + " porcess(es) found.");
-
-		delete[] pIds;
+		io::printInfo(std::to_string(size) + " porcess(es) found.");
 
 		return true;
 	}

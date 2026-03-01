@@ -1,7 +1,6 @@
 #pragma once
 #include <hax.h>
 #include <Windows.h>
-#include <unordered_map>
 #include <string>
 
 // Handles console output and user input.
@@ -69,7 +68,7 @@ namespace io {
 	// 
 	// [in] procIds:
 	// List with all process IDs that are offered as a selection.
-	void printProcessIdMenu(const std::vector<DWORD>& procIds);
+	void printProcessIdMenu(const hax::Vector<DWORD>& procIds);
 
 	// Lets the user select the action to be executed.
 	// 
