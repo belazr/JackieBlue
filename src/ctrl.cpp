@@ -8,8 +8,8 @@ namespace ctrl {
 
 	static constexpr DWORD PROCESS_REQUIRED_ACCESS = (PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_CREATE_THREAD);
 
-	static void takeInjectionAction(io::Action curAction, io::LaunchMethod curLaunchMethod, io::HandleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir);
-	static void takeUnlinkAction(io::HandleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName);
+	static void takeInjectionAction(io::Action curAction, io::LaunchMethod curLaunchMethod, io::HandleCreation curHandleCreation, const std::string& procName, const std::string& dllName, const std::string& dllDir);
+	static void takeUnlinkAction(io::HandleCreation curHandleCreation, const std::string& procName, const std::string& dllName);
 
 	void run(std::string procName, std::string dllName, std::string dllDir) {
 		io::init();
@@ -50,10 +50,10 @@ namespace ctrl {
 			switch (curAction) {
 			case io::Action::LOAD_LIB:
 			case io::Action::MAN_MAP:
-				takeInjectionAction(curAction, curLaunchMethod, curHandleCreation, &procName, &dllName, &dllDir);
+				takeInjectionAction(curAction, curLaunchMethod, curHandleCreation, procName, dllName, dllDir);
 				break;
 			case io::Action::UNLINK:
-				takeUnlinkAction(curHandleCreation, &procName, &dllName);
+				takeUnlinkAction(curHandleCreation, procName, dllName);
 				break;
 			default:
 				break;
@@ -65,11 +65,11 @@ namespace ctrl {
 	}
 
 
-	static HANDLE getProcessHandle(const std::string* pProcName, io::HandleCreation curHandleCreation);
+	static HANDLE getProcessHandle(const std::string& procName, io::HandleCreation curHandleCreation);
 	static hax::launch::tLaunchFunc getLaunchFunction(io::LaunchMethod launchMethod, BOOL isWow64);
 
-	static void takeInjectionAction(io::Action curAction, io::LaunchMethod curLaunchMethod, io::HandleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName, const std::string* pDllDir) {
-		const HANDLE hProc = getProcessHandle(pProcName, curHandleCreation);
+	static void takeInjectionAction(io::Action curAction, io::LaunchMethod curLaunchMethod, io::HandleCreation curHandleCreation, const std::string& procName, const std::string& dllName, const std::string& dllDir) {
+		const HANDLE hProc = getProcessHandle(procName, curHandleCreation);
 
 		if (!hProc) return;
 
@@ -84,7 +84,7 @@ namespace ctrl {
 			return;
 		}
 
-		const std::string dllFullPath = (*pDllDir + "\\" + *pDllName);
+		const std::string dllFullPath = (dllDir + "\\" + dllName);
 		bool success = false;
 
 		switch (curAction) {
@@ -106,12 +106,12 @@ namespace ctrl {
 	}
 
 
-	static bool findProcIds(const std::string* pProcName, std::vector<DWORD>& procIds);
+	static bool findProcIds(const std::string& procName, std::vector<DWORD>& procIds);
 
-	static HANDLE getProcessHandle(const std::string* pProcName, io::HandleCreation curHandleCreation) {
+	static HANDLE getProcessHandle(const std::string& procName, io::HandleCreation curHandleCreation) {
 		std::vector<DWORD> procIds{};
 
-		if (!findProcIds(pProcName, procIds)) return nullptr;
+		if (!findProcIds(procName, procIds)) return nullptr;
 
 		size_t targetProcIdIndex = 0;
 
@@ -147,15 +147,15 @@ namespace ctrl {
 	}
 
 
-	static bool findProcIds(const std::string* pProcName, std::vector<DWORD>& procIds) {
-		io::printInfo("Looking for processes with name: '" + *pProcName + "'...");
+	static bool findProcIds(const std::string& procName, std::vector<DWORD>& procIds) {
+		io::printInfo("Looking for processes with name: '" + procName + "'...");
 
 		size_t size = 0u;
 
 		// search for the process for five seconds
 		for (int i = 0; i < 50; i++) {
 
-			if (hax::proc::getProcessIds(pProcName->c_str(), nullptr, &size) && size) break;
+			if (hax::proc::getProcessIds(procName.c_str(), nullptr, &size) && size) break;
 
 			Sleep(100);
 		}
@@ -176,7 +176,7 @@ namespace ctrl {
 
 		size_t tmp = size;
 
-		if (!hax::proc::getProcessIds(pProcName->c_str(), pIds, &tmp) || !tmp) {
+		if (!hax::proc::getProcessIds(procName.c_str(), pIds, &tmp) || !tmp) {
 			delete[] pIds;
 			io::printWinError("Failed to get process IDs.");
 
@@ -246,12 +246,12 @@ namespace ctrl {
 	}
 
 
-	static void takeUnlinkAction(io::HandleCreation curHandleCreation, const std::string* pProcName, const std::string* pDllName) {
-		const HANDLE hProc = getProcessHandle(pProcName, curHandleCreation);
+	static void takeUnlinkAction(io::HandleCreation curHandleCreation, const std::string& procName, const std::string& dllName) {
+		const HANDLE hProc = getProcessHandle(procName, curHandleCreation);
 
 		if (!hProc) return;
 
-		const bool success = ldr::unlinkModule(hProc, pDllName->c_str());
+		const bool success = ldr::unlinkModule(hProc, dllName.c_str());
 
 		io::printUnlinkResult(success);
 
