@@ -2,124 +2,141 @@
 #include "io.h"
 
 namespace manMap {
+	typedef HMODULE(WINAPI* tLoadLibraryA)(const char* dllPath);
+	typedef FARPROC(WINAPI* tGetProcAddress)(HMODULE hModule, const char* funcName);
 
-	static bool writeMappedDll(HANDLE hProc, BYTE* pImageBase, const IMAGE_NT_HEADERS* pNtHeaders, BYTE* pDllBytes, BOOL isWow64);
-	static BYTE* writeShellCode(HANDLE hProc, BOOL isWow64);
+	typedef struct ShellCodeParams {
+		tLoadLibraryA	pLoadLibraryA;
+		tGetProcAddress pGetProcAddress;
+	} ShellCodeParams;
+
+	static bool getShellCodeParams(HANDLE hProc, ShellCodeParams* pParams);
+
+	typedef struct MemoryRegion {
+		BYTE* pBase;
+		DWORD size;
+	} MemoryRegion;
+
+	static MemoryRegion getImageRegion(const hax::proc::PeHeaders* pHeaders, BOOL isWow64);
+	static BYTE* allocMemoryRegion(HANDLE hProc, const MemoryRegion* pMemoryRegion);
+	static bool writeImage(HANDLE hProc, const MemoryRegion* pImageRegion, const BYTE* pImage);
+	static bool writeShellCodeParams(HANDLE hProc, BYTE* pImageBase, const ShellCodeParams* pParams, BOOL isWow64);
+	static MemoryRegion getShellCodeRegion(BOOL isWow64);
+	static bool writeShellCode(HANDLE hProc, const MemoryRegion* pShellCodeRegion, BOOL isWow64);
 
 	bool inject(HANDLE hProc, const char* dllPath, hax::launch::tLaunchFunc pLaunchFunc) {
 		BOOL isWow64 = FALSE;
-		IsWow64Process(hProc, &isWow64);
+		
+		if (!IsWow64Process(hProc, &isWow64)) {
+			io::printWinError("Failed to get architecture of target process.");
+
+			return false;
+		}
 		
 		#ifndef _WIN64
 		
 		if (!isWow64) {
-			io::printPlainError("Can not unlink dll from x64 process. Please use the x64 binary.");
+			io::printPlainError("Cannot inject DLL into x64 process. Please use the x64 binary.");
 			
 			return false;
 		}
 
 		#endif // !_WIN64
 
-		hax::FileLoader dllLoader = hax::FileLoader(dllPath);
-		
-		if (dllLoader.lastErrno()) {
-			io::printFileError("Failed to open file.", dllLoader.lastErrno());
-			
-			return false;
-		}
-		
-		if (!dllLoader.readBytes() || dllLoader.lastErrno()) {
-			io::printFileError("Failed to write file to memory.", dllLoader.lastErrno());
-			
+		ShellCodeParams params{};
+
+		if (!getShellCodeParams(hProc, &params)) {
+			io::printPlainError("Failed to get shell code parameters.");
+
 			return false;
 		}
 
-		BYTE* const pDllBytes = dllLoader.data();
+		hax::FileMapper dllMapper (dllPath);
+		const DWORD err = dllMapper.map(true);
+		
+		if (err != ERROR_SUCCESS) {
+			io::printWinError("Failed to map DLL.", err);
+
+			return false;
+		}
+
+		const BYTE* const pImage = dllMapper.data();
 		hax::proc::PeHeaders headers{};
 		
-		if (!hax::proc::in::getPeHeaders(reinterpret_cast<HMODULE>(pDllBytes), &headers)) {
+		if (!hax::proc::in::getPeHeaders(reinterpret_cast<HMODULE>(const_cast<BYTE*>(pImage)), &headers)) {
 			io::printPlainError("File format is not PE.");
 			
 			return false;
 		}
 
-		const IMAGE_NT_HEADERS* pNtHeaders = nullptr;
-		BYTE* pPrefBase = nullptr;
-		size_t imgSize = 0;
-		
-		// get prefered dll image base and size
-		if (!isWow64 && headers.pOptHeader64) {
-			
-			#ifdef _WIN64
+		MemoryRegion imageRegion = getImageRegion(&headers, isWow64);
 
-			pNtHeaders = reinterpret_cast<const IMAGE_NT_HEADERS*>(headers.pNtHeaders64);
-			pPrefBase = reinterpret_cast<BYTE*>(headers.pOptHeader64->ImageBase);
-			imgSize = headers.pOptHeader64->SizeOfImage;
-			
-			#endif // _WIN64
+		if (!imageRegion.pBase) {
+			io::printPlainError("DLL and target process architecture do not match.");
 
-		}
-		else if (isWow64 && headers.pOptHeader32) {
-			pNtHeaders = reinterpret_cast<const IMAGE_NT_HEADERS*>(headers.pNtHeaders32);
-			pPrefBase = reinterpret_cast<BYTE*>(static_cast<uintptr_t>(headers.pOptHeader32->ImageBase));
-			imgSize = headers.pOptHeader32->SizeOfImage;
-		}
-		else {
-			io::printPlainError("Process and DLL architecture not compatible.");
-			
 			return false;
 		}
 
-		// try to allocate memory at prefered image base
-		BYTE* pImageBase = static_cast<BYTE*>(VirtualAllocEx(hProc, pPrefBase, imgSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
-		
-		if (!pImageBase) {
-			// try to allocate memory anywhere in the target process
-			// module needs to be relocated after mapping in this case
-			pImageBase = static_cast<BYTE*>(VirtualAllocEx(hProc, nullptr, imgSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
-			
-			if (!pImageBase) {
-				io::printWinError("Failed to allocate memory for module in target process.");
-				return false;
-			}
+		imageRegion.pBase = allocMemoryRegion(hProc, &imageRegion);
 
-		}
+		if (!imageRegion.pBase) {
+			io::printWinError("Failed to allocate memory for image in target process.");
 
-		if (!writeMappedDll(hProc, pImageBase, pNtHeaders, pDllBytes, isWow64)) {
-			VirtualFreeEx(hProc, pImageBase, 0, MEM_RELEASE);
-			
 			return false;
 		}
 
-		BYTE* pShellCode = writeShellCode(hProc, isWow64);
-		
-		if (!pShellCode) {
-			VirtualFreeEx(hProc, pImageBase, 0, MEM_RELEASE);
-			
+		if (!writeImage(hProc, &imageRegion, pImage)) {
+			io::printWinError("Failed to write image to target process.");
+			VirtualFreeEx(hProc, imageRegion.pBase, 0, MEM_RELEASE);
+
+			return false;
+		}
+
+		if (!writeShellCodeParams(hProc, imageRegion.pBase, &params, isWow64)) {
+			io::printWinError("Failed to write shell code params to target process.");
+			VirtualFreeEx(hProc, imageRegion.pBase, 0, MEM_RELEASE);
+
+			return false;
+		}
+
+		MemoryRegion shellCodeRegion = getShellCodeRegion(isWow64);
+		shellCodeRegion.pBase = allocMemoryRegion(hProc, &shellCodeRegion);
+
+		if (!shellCodeRegion.pBase) {
+			io::printWinError("Failed to allocate memory for shell code in target process.");
+			VirtualFreeEx(hProc, imageRegion.pBase, 0, MEM_RELEASE);
+
+			return false;
+		}
+
+		if (!writeShellCode(hProc, &shellCodeRegion, isWow64)) {
+			io::printWinError("Failed to write shell code to target process.");
+			VirtualFreeEx(hProc, shellCodeRegion.pBase, 0, MEM_RELEASE);
+			VirtualFreeEx(hProc, imageRegion.pBase, 0, MEM_RELEASE);
+
 			return false;
 		}
 
 		uintptr_t pModBase = 0;
-		const hax::launch::Status status = pLaunchFunc(hProc, reinterpret_cast<hax::launch::tLaunchableFunc>(pShellCode), pImageBase, &pModBase);
+		const hax::launch::Status status = pLaunchFunc(hProc, reinterpret_cast<hax::launch::tLaunchableFunc>(shellCodeRegion.pBase), imageRegion.pBase, &pModBase);
 
-		// parameters were written to the dll image base because the pe header of the dll is not needed anyway
 		if (status != hax::launch::Status::SUCCESS) {
 			io::printLaunchError(status);
-			VirtualFreeEx(hProc, pImageBase, 0, MEM_RELEASE);
-			VirtualFreeEx(hProc, pShellCode, 0, MEM_RELEASE);
+			VirtualFreeEx(hProc, shellCodeRegion.pBase, 0, MEM_RELEASE);
+			VirtualFreeEx(hProc, imageRegion.pBase, 0, MEM_RELEASE);
 
 			return false;
 		}
 
 		if (!pModBase) {
 			io::printPlainError("Failed to load module.");
-			VirtualFreeEx(hProc, pImageBase, 0, MEM_RELEASE);
-			VirtualFreeEx(hProc, pShellCode, 0, MEM_RELEASE);
+			VirtualFreeEx(hProc, shellCodeRegion.pBase, 0, MEM_RELEASE);
+			VirtualFreeEx(hProc, imageRegion.pBase, 0, MEM_RELEASE);
 
 			return false;
 		}
 
-		VirtualFreeEx(hProc, pShellCode, 0, MEM_RELEASE);
+		VirtualFreeEx(hProc, shellCodeRegion.pBase, 0, MEM_RELEASE);
 
 		io::printInfo("Module loaded at: " + io::formatPointer(pModBase));
 
@@ -127,63 +144,25 @@ namespace manMap {
 	}
 
 
-	typedef HMODULE(WINAPI* tLoadLibraryA)(const char* dllPath);
-	typedef FARPROC(WINAPI* tGetProcAddress)(HMODULE hModule, const char* funcName);
-
-	// parameters for manual mapping shell code
-	typedef struct ManMapFuncs {
-		tLoadLibraryA	pLoadLibraryA;
-		tGetProcAddress pGetProcAddress;
-	} ManMapFuncs;
-
-	static bool getManMapFuncs(HANDLE hProc, ManMapFuncs* pManMapFuncs);
-	static void writeShellCodeParameters(BYTE* pBase, ManMapFuncs data, BOOL isWow64);
-	static bool mapSections(HANDLE hProc, BYTE* pImageBase, const IMAGE_NT_HEADERS* pNtHeaders, BYTE* pDllBytes);
-
-	static bool writeMappedDll(HANDLE hProc, BYTE* pImageBase, const IMAGE_NT_HEADERS* pNtHeaders, BYTE* pDllBytes, BOOL isWow64) {
-		ManMapFuncs manMapFuncs{};
-		
-		if (!getManMapFuncs(hProc, &manMapFuncs)) return false;
-
-		// write parameters of the shell code to the dll image base because pe header is not needed and to save addition memory allocation and writes to the target
-		writeShellCodeParameters(pDllBytes, manMapFuncs, isWow64);
-
-		// write header section
-		if (!WriteProcessMemory(hProc, pImageBase, pDllBytes, 0x1000, nullptr)) {
-			io::printWinError("Failed to write module header to target process.");
-			
-			return false;
-		}
-
-		// map remaining sections
-		if (!mapSections(hProc, pImageBase, pNtHeaders, pDllBytes)) return false;
-
-		return true;
-	}
-
-
-	static bool getManMapFuncs(HANDLE hProc, ManMapFuncs* pManMapFuncs) {
+	static bool getShellCodeParams(HANDLE hProc, ShellCodeParams* pShellCodeParams) {
 		HMODULE hKernel32 = hax::proc::ex::getModuleHandle(hProc, "kernel32.dll");
-		
+
 		if (!hKernel32) {
-			io::printPlainError("Failed to retrieve kernel32.dll module handle from target process.");
-			
+
 			return false;
 		}
 
-		pManMapFuncs->pLoadLibraryA = reinterpret_cast<tLoadLibraryA>(hax::proc::ex::getProcAddress(hProc, hKernel32, "LoadLibraryA"));
+		pShellCodeParams->pLoadLibraryA = reinterpret_cast<tLoadLibraryA>(hax::proc::ex::getProcAddress(hProc, hKernel32, "LoadLibraryA"));
 
-		if (!pManMapFuncs->pLoadLibraryA) {
-			io::printPlainError("Failed to retrieve LoadLibraryA address from target process.");
-			
+		if (!pShellCodeParams->pLoadLibraryA) {
+
 			return false;
 		}
 
-		pManMapFuncs->pGetProcAddress = reinterpret_cast<tGetProcAddress>(hax::proc::ex::getProcAddress(hProc, hKernel32, "GetProcAddress"));
+		pShellCodeParams->pGetProcAddress = reinterpret_cast<tGetProcAddress>(hax::proc::ex::getProcAddress(hProc, hKernel32, "GetProcAddress"));
 
-		if (!pManMapFuncs->pGetProcAddress) {
-			io::printPlainError("Failed to retrieve GetProcAddress address from target process.");
-			
+		if (!pShellCodeParams->pGetProcAddress) {
+
 			return false;
 		}
 
@@ -191,43 +170,79 @@ namespace manMap {
 	}
 
 
-	static void writeShellCodeParameters(BYTE* pBase, ManMapFuncs data, BOOL isWow64) {
-		
-		if (isWow64) {
-			memcpy_s(pBase, sizeof(UINT32), &data.pLoadLibraryA, sizeof(UINT32));
-			memcpy_s(pBase + sizeof(UINT32), sizeof(UINT32), &data.pGetProcAddress, sizeof(UINT32));
-			// sets flag to signal shell code execution to zero
-			memset(pBase + 2 * sizeof(UINT32), 0, sizeof(BYTE));
-		}
-		else {
-			
+	static MemoryRegion getImageRegion(const hax::proc::PeHeaders* pHeaders, BOOL isWow64) {
+		MemoryRegion imageRegion{};
+
+		if (!isWow64 && pHeaders->pOptHeader64) {
+
 			#ifdef _WIN64
 
-			memcpy_s(pBase, sizeof(data), &data, sizeof(data));
-			// sets flag to signal shell code execution to zero
-			memset(pBase + sizeof(data), 0, sizeof(BYTE));
-			
+			imageRegion.pBase = reinterpret_cast<BYTE*>(pHeaders->pOptHeader64->ImageBase);
+			imageRegion.size = pHeaders->pOptHeader64->SizeOfImage;
+
 			#endif // _WIN64
-		
+
+		}
+		else if (isWow64 && pHeaders->pOptHeader32) {
+			imageRegion.pBase = reinterpret_cast<BYTE*>(static_cast<uintptr_t>(pHeaders->pOptHeader32->ImageBase));
+			imageRegion.size = pHeaders->pOptHeader32->SizeOfImage;
 		}
 
+		return imageRegion;
 	}
 
 
-	static bool mapSections(HANDLE hProc, BYTE* pImageBase, const IMAGE_NT_HEADERS* pNtHeaders, BYTE* pDllBytes) {
-		const IMAGE_SECTION_HEADER* pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
-		
-		for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++, pSectionHeader++) {
-			
-			if (pSectionHeader->SizeOfRawData) {
-				
-				if (!WriteProcessMemory(hProc, pImageBase + pSectionHeader->VirtualAddress, pDllBytes + pSectionHeader->PointerToRawData, pSectionHeader->SizeOfRawData, nullptr)) {
-					io::printWinError("Failed to write section " + std::to_string(i) + " to target process.");
-					
-					return false;
-				}
+	static BYTE* allocMemoryRegion(HANDLE hProc, const MemoryRegion* pMemoryRegion) {
+		BYTE* pImageBase = static_cast<BYTE*>(VirtualAllocEx(hProc, pMemoryRegion->pBase, pMemoryRegion->size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
 
+		if (!pImageBase) {
+			pImageBase = static_cast<BYTE*>(VirtualAllocEx(hProc, nullptr, pMemoryRegion->size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+		}
+
+		return pImageBase;
+	}
+
+
+	static bool writeImage(HANDLE hProc, const MemoryRegion* pImageRegion, const BYTE* pImage) {
+		
+		if (!WriteProcessMemory(hProc, pImageRegion->pBase, pImage, pImageRegion->size, nullptr)) {
+
+			return false;
+		}
+
+		return true;
+	}
+
+
+	static bool writeShellCodeParams(HANDLE hProc, BYTE* pImageBase, const ShellCodeParams* pParams, BOOL isWow64) {
+		// write parameters of the shell code to the DLL image base to save additional memory allocations
+		if (isWow64) {
+
+			if (!WriteProcessMemory(hProc, pImageBase, &pParams->pLoadLibraryA, sizeof(UINT32), nullptr)) {
+
+				return false;
 			}
+
+			if (!WriteProcessMemory(hProc, pImageBase + sizeof(UINT32), &pParams->pGetProcAddress, sizeof(UINT32), nullptr)) {
+
+				return false;
+			}
+
+		}
+		else {
+
+			#ifdef _WIN64
+
+			if (!WriteProcessMemory(hProc, pImageBase, pParams, sizeof(*pParams), nullptr)) {
+
+				return false;
+			}
+
+			#else
+
+			return false;
+
+			#endif // _WIN64
 
 		}
 
@@ -239,51 +254,50 @@ namespace manMap {
 
 	static const BYTE shellX86[]{ 0x55, 0x8b, 0xec, 0x83, 0xec, 0x10, 0x53, 0x56, 0x57, 0x8b, 0x7d, 0x08, 0x85, 0xff, 0x0f, 0x84, 0x5d, 0x01, 0x00, 0x00, 0x8b, 0x57, 0x3c, 0x8b, 0xc7, 0x03, 0xd7, 0x89, 0x55, 0x08, 0x2b, 0x42, 0x34, 0x89, 0x45, 0xf4, 0x74, 0x65, 0x83, 0xba, 0xa4, 0x00, 0x00, 0x00, 0x00, 0x8b, 0x82, 0xa0, 0x00, 0x00, 0x00, 0x0f, 0x84, 0x38, 0x01, 0x00, 0x00, 0x83, 0x3c, 0x38, 0x00, 0x8d, 0x1c, 0x38, 0x74, 0x49, 0x8b, 0x73, 0x04, 0x8d, 0x43, 0x04, 0x83, 0xee, 0x08, 0x89, 0x45, 0xf8, 0xd1, 0xee, 0x8d, 0x53, 0x08, 0x74, 0x2c, 0x0f, 0xb7, 0x02, 0x8b, 0xc8, 0x81, 0xe1, 0x00, 0xf0, 0x00, 0x00, 0x81, 0xf9, 0x00, 0x30, 0x00, 0x00, 0x75, 0x0e, 0x8b, 0x4d, 0xf4, 0x25, 0xff, 0x0f, 0x00, 0x00, 0x03, 0xc7, 0x03, 0x03, 0x01, 0x08, 0x83, 0xc2, 0x02, 0x83, 0xee, 0x01, 0x75, 0xd7, 0x8b, 0x45, 0xf8, 0x03, 0x18, 0x83, 0x3b, 0x00, 0x75, 0xba, 0x8b, 0x55, 0x08, 0x83, 0xba, 0x84, 0x00, 0x00, 0x00, 0x00, 0x8b, 0x8a, 0x80, 0x00, 0x00, 0x00, 0x0f, 0x84, 0x90, 0x00, 0x00, 0x00, 0x8b, 0x17, 0x8b, 0x47, 0x04, 0x89, 0x55, 0xf0, 0x89, 0x45, 0xf8, 0x85, 0xd2, 0x0f, 0x84, 0xc0, 0x00, 0x00, 0x00, 0x85, 0xc0, 0x0f, 0x84, 0xb8, 0x00, 0x00, 0x00, 0x83, 0x7c, 0x39, 0x0c, 0x00, 0x8d, 0x1c, 0x39, 0x89, 0x5d, 0xf4, 0x74, 0x65, 0x8b, 0x43, 0x0c, 0x03, 0xc7, 0x50, 0xff, 0xd2, 0x89, 0x45, 0xfc, 0x85, 0xc0, 0x0f, 0x84, 0x98, 0x00, 0x00, 0x00, 0x8b, 0x0b, 0x8b, 0x53, 0x10, 0x8d, 0x04, 0x39, 0x85, 0xc0, 0x8d, 0x34, 0x3a, 0x0f, 0x45, 0xd1, 0x8b, 0x04, 0x3a, 0x8d, 0x1c, 0x3a, 0x85, 0xc0, 0x74, 0x26, 0x79, 0x05, 0x0f, 0xb7, 0xc0, 0xeb, 0x05, 0x83, 0xc0, 0x02, 0x03, 0xc7, 0x50, 0xff, 0x75, 0xfc, 0xff, 0x55, 0xf8, 0x89, 0x06, 0x85, 0xc0, 0x74, 0x65, 0x8b, 0x43, 0x04, 0x83, 0xc3, 0x04, 0x83, 0xc6, 0x04, 0x85, 0xc0, 0x75, 0xda, 0x8b, 0x5d, 0xf4, 0x8b, 0x55, 0xf0, 0x83, 0xc3, 0x14, 0x89, 0x5d, 0xf4, 0x83, 0x7b, 0x0c, 0x00, 0x75, 0x9b, 0x8b, 0x55, 0x08, 0x83, 0xba, 0xc4, 0x00, 0x00, 0x00, 0x00, 0x8b, 0xb2, 0xc0, 0x00, 0x00, 0x00, 0x74, 0x1d, 0x8b, 0x74, 0x3e, 0x0c, 0x85, 0xf6, 0x74, 0x15, 0x8b, 0x06, 0x85, 0xc0, 0x74, 0x0c, 0x6a, 0x00, 0x6a, 0x01, 0x57, 0xff, 0xd0, 0x83, 0xc6, 0x04, 0x75, 0xee, 0x8b, 0x55, 0x08, 0x8b, 0x4a, 0x28, 0x6a, 0x00, 0x6a, 0x01, 0x57, 0x03, 0xcf, 0xff, 0xd1, 0x8b, 0xc7, 0x5f, 0x5e, 0x5b, 0x8b, 0xe5, 0x5d, 0xc2, 0x04, 0x00 };
 
-	static BYTE* writeShellCode(HANDLE hProc, BOOL isWow64) {
-		BYTE* pShellCode = nullptr;
-		
+	static MemoryRegion getShellCodeRegion(BOOL isWow64) {
+		MemoryRegion shellCodeRegion{};
+
 		if (isWow64) {
-			pShellCode = static_cast<BYTE*>(VirtualAllocEx(hProc, nullptr, sizeof(shellX86), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+			shellCodeRegion.size = sizeof(shellX86);
 		}
 		else {
-			
+
 			#ifdef _WIN64
 
-			pShellCode = static_cast<BYTE*>(VirtualAllocEx(hProc, nullptr, sizeof(shellX64), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
-			
+			shellCodeRegion.size = sizeof(shellX64);
+
 			#endif // _WIN64
 
 		}
 
-		if (!pShellCode) {
-			io::printWinError("Failed to allocate memory for shell code in target process.");
+		return shellCodeRegion;
+	}
 
-			return nullptr;
-		}
+
+	static bool writeShellCode(HANDLE hProc, const MemoryRegion* pShellCodeRegion, BOOL isWow64) {
 
 		if (isWow64) {
 			
-			if (!WriteProcessMemory(hProc, pShellCode, shellX86, sizeof(shellX86), nullptr)) {
-				io::printWinError("Failed to write shell code to target process.");
-				return nullptr;
-			}
-
-		}
-		else {
-			
-			#ifdef _WIN64
-			
-			if (!WriteProcessMemory(hProc, pShellCode, shellX64, sizeof(shellX64), nullptr)) {
-				io::printWinError("Failed to write shell code to target process.");
+			if (!WriteProcessMemory(hProc, pShellCodeRegion->pBase, shellX86, pShellCodeRegion->size, nullptr)) {
 				
-				return nullptr;
+				return false;
+			}
+
+		}
+		else {
+			
+			#ifdef _WIN64
+			
+			if (!WriteProcessMemory(hProc, pShellCodeRegion->pBase, shellX64, pShellCodeRegion->size, nullptr)) {
+				
+				return false;
 			}
 
 			#endif // _WIN64
 
 		}
 
-		return pShellCode;
+		return true;
 	}
 
 
@@ -346,10 +360,10 @@ namespace manMap {
 		// fix IAT
 		if (importEntry.Size) {
 			// functions to fix IAT were written to the image base since header is not needed
-			const ManMapFuncs* const pFuncs = reinterpret_cast<ManMapFuncs*>(pImageBase);
+			const ShellCodeParams* const pParams = reinterpret_cast<ShellCodeParams*>(pImageBase);
 			
-			const tLoadLibraryA _LoadLibraryA = pFuncs->pLoadLibraryA;
-			const tGetProcAddress _GetProcAddress = pFuncs->pGetProcAddress;
+			const tLoadLibraryA _LoadLibraryA = pParams->pLoadLibraryA;
+			const tGetProcAddress _GetProcAddress = pParams->pGetProcAddress;
 
 			if (!_LoadLibraryA || !_GetProcAddress) return nullptr;
 

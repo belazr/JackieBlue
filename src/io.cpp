@@ -262,8 +262,11 @@ namespace io {
 	}
 
 
-	void printWinError(std::string msg) {
-		const DWORD winError = GetLastError();
+	void printWinError(std::string msg, DWORD winError) {
+		
+		if (winError == ERROR_SUCCESS) {
+			winError = GetLastError();
+		}
 		
 		std::string winErrorStr = " Error code: " + std::to_string(winError);
 		printPlainError(msg + winErrorStr);
@@ -272,18 +275,6 @@ namespace io {
 		if (winError == ERROR_ACCESS_DENIED) {
 			io::printPlainError("Try running as administrator.");
 		}
-
-		return;
-	}
-
-
-	void printFileError(std::string msg, errno_t errNo) {
-		char errStr[0x100]{};
-		strerror_s(errStr, 0x100, errNo);
-
-		std::string fileError = " ";
-		fileError.append(errStr);
-		printPlainError(msg + fileError);
 
 		return;
 	}
