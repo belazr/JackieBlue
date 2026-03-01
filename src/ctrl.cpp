@@ -28,16 +28,16 @@ namespace ctrl {
 			io::printHeader();
 			io::printTargetInfo(procName, dllName, dllDir);
 			io::printMainMenu(curAction);
-			curAction = io::selectAction(curAction);
+			curAction = io::selectEnum(curAction);
 
 			switch (curAction) {
 			case io::Action::LOAD_LIB:
 			case io::Action::MAN_MAP:
 				io::printLaunchMethodMenu(curAction, curLaunchMethod);
-				curLaunchMethod = io::selectLaunchMethod(curLaunchMethod);
+				curLaunchMethod = io::selectEnum(curLaunchMethod);
 			case io::Action::UNLINK:
 				io::printHandleCreationMenu(curAction, curHandleCreation);
-				curHandleCreation = io::selectHandleCreation(curHandleCreation);
+				curHandleCreation = io::selectEnum(curHandleCreation);
 				io::initLog();
 				break;
 			case io::Action::CHANGE_TARGETS:
@@ -127,10 +127,10 @@ namespace ctrl {
 		HANDLE hProc = nullptr;
 
 		switch (curHandleCreation) {
-		case io::OPEN_PROCESS:
+		case io::HandleCreation::OPEN_PROCESS:
 			hProc = OpenProcess(PROCESS_REQUIRED_ACCESS, FALSE, procId);
 			break;
-		case io::DUPLICATE_HANDLE:
+		case io::HandleCreation::DUPLICATE_HANDLE:
 			hProc = hax::proc::getDuplicateProcessHandle(PROCESS_REQUIRED_ACCESS, FALSE, procId);
 			break;
 		default:

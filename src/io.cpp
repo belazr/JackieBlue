@@ -112,8 +112,8 @@ namespace io {
 		printMenuItem("Select action:");
 
 		// print all options starting at the first non exit option
-		for (int i = Action::EXIT + 1; i < Action::MAX_ACTION; i++) {
-			printMenuItem(getMenuEntryString(static_cast<Action>(i), actionLabels, i == curAction));
+		for (int i = static_cast<int>(Action::EXIT) + 1; i < static_cast<int>(Action::MAX_VAL); i++) {
+			printMenuItem(getMenuEntryString(static_cast<Action>(i), actionLabels, i == static_cast<int>(curAction)));
 		}
 
 		// print the exit option as last entry
@@ -129,8 +129,8 @@ namespace io {
 
 		printMenuItem("Select launch method (" + actionLabels.at(curAction) + "):");
 
-		for (int i = LaunchMethod::CREATE_THREAD; i < LaunchMethod::MAX_LAUNCH_METHOD; i++) {
-			printMenuItem(getMenuEntryString(static_cast<LaunchMethod>(i), launchMethodLabels, i == curLaunchMethod));
+		for (int i = static_cast<int>(LaunchMethod::CREATE_THREAD); i < static_cast<int>(LaunchMethod::MAX_VAL); i++) {
+			printMenuItem(getMenuEntryString(static_cast<LaunchMethod>(i), launchMethodLabels, i == static_cast<int>(curLaunchMethod)));
 		}
 
 		std::cout << std::endl;
@@ -144,8 +144,8 @@ namespace io {
 
 		printMenuItem("Select handle creation (" + actionLabels.at(curAction) + "):");
 
-		for (int i = HandleCreation::OPEN_PROCESS; i < HandleCreation::MAX_HANDLE_CREATION; i++) {
-			printMenuItem(getMenuEntryString(static_cast<HandleCreation>(i), handleCreationLabels, i == curHandleCreation));
+		for (int i = static_cast<int>(HandleCreation::OPEN_PROCESS); i < static_cast<int>(HandleCreation::MAX_VAL); i++) {
+			printMenuItem(getMenuEntryString(static_cast<HandleCreation>(i), handleCreationLabels, i == static_cast<int>(curHandleCreation)));
 		}
 
 		std::cout << std::endl;
@@ -190,31 +190,14 @@ namespace io {
 
 
 	static int getIntInput();
-	
-	Action selectAction(Action current) {
+
+	template<typename Enum>
+	Enum selectEnum(Enum current) {
 		const int input = getIntInput();
 
-		if (input < 0 || input >= Action::MAX_ACTION) return current;
+		if (input < 0 || input >= static_cast<int>(Enum::MAX_VAL)) return current;
 
-		return static_cast<Action>(input);
-	}
-
-
-	LaunchMethod selectLaunchMethod(LaunchMethod current) {
-		const int input = getIntInput();
-
-		if (input < 0 || input >= LaunchMethod::MAX_LAUNCH_METHOD) return current;
-
-		return static_cast<LaunchMethod>(input);
-	}
-
-
-	HandleCreation selectHandleCreation(HandleCreation current) {
-		const int input = getIntInput();
-
-		if (input < 0 || input >= HandleCreation::MAX_HANDLE_CREATION) return current;
-
-		return static_cast<HandleCreation>(input);
+		return static_cast<Enum>(input);
 	}
 
 
@@ -377,7 +360,7 @@ namespace io {
 
 	template<typename Enum>
 	static std::string getMenuEntryString(Enum curEntry, const std::unordered_map<Enum, std::string>& map, bool isSelected) {
-		std::string strNum = std::to_string(curEntry);
+		std::string strNum = std::to_string(static_cast<int>(curEntry));
 		std::string padding(4 - strNum.length(), ' ');
 		std::string entryString = padding + strNum + "  " + map.at(curEntry);
 
