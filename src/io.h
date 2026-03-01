@@ -9,9 +9,9 @@
 namespace io {
 
 	// options for user selection
-	typedef enum Action { EXIT = 0, LOAD_LIB, MAN_MAP, UNLINK, CHANGE_TARGETS, MAX_ACTION }Action;
-	typedef enum LaunchMethod { CREATE_THREAD = 1, HIJACK_THREAD, SET_WINDOWS_HOOK, HOOK_BEGIN_PAINT, QUEUE_USER_APC, MAX_LAUNCH_METHOD }LaunchMethod;
-	typedef enum HandleCreation { OPEN_PROCESS = 1, DUPLICATE_HANDLE, MAX_HANDLE_CREATION }HandleCreation;
+	typedef enum class Action { EXIT = 0, LOAD_LIB, MAN_MAP, UNLINK, CHANGE_TARGETS, MAX_VAL }Action;
+	typedef enum class LaunchMethod { CREATE_THREAD = 1, HIJACK_THREAD, SET_WINDOWS_HOOK, HOOK_BEGIN_PAINT, QUEUE_USER_APC, MAX_VAL }LaunchMethod;
+	typedef enum class HandleCreation { OPEN_PROCESS = 1, DUPLICATE_HANDLE, MAX_VAL }HandleCreation;
 
 	// Sets the console output handle to std out.
 	void init();
@@ -76,33 +76,16 @@ namespace io {
 	// Parameters:
 	// 
 	// [in] current:
-	// Action currently selected.
+	// Enum currently selected.
 	//
 	// Return:
-	// Action selected by user or current action for invalid input.
-	Action selectAction(Action current);
+	// Enum selected by user or current enum for invalid input.
+	template<typename Enum>
+	Enum selectEnum(Enum current);
 
-	// Lets the user select the launch method of the code to execute the injection.
-	// 
-	// Parameters:
-	// 
-	// [in] current:
-	// Launch method currently selected.
-	//
-	// Return:
-	// Launch method selected by user or current launch method for invalid input.
-	LaunchMethod selectLaunchMethod(LaunchMethod current);
-
-	// Lets the user select the handle creation.
-	// 
-	// Parameters:
-	// 
-	// [in] current:
-	// Handle creation currently selected.
-	//
-	// Return:
-	// Handle creation selected by user or current handle creation for invalid input.
-	HandleCreation selectHandleCreation(HandleCreation current);
+	template Action selectEnum<Action>(Action current);
+	template LaunchMethod selectEnum<LaunchMethod>(LaunchMethod current);
+	template HandleCreation selectEnum<HandleCreation>(HandleCreation current);
 
 	// Lets the user select the target process ID.
 	// 
