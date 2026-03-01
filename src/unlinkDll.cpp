@@ -26,7 +26,7 @@ namespace ldr {
 
             #else
 
-            io::printPlainError("Can not unlink dll from x64 process. Please use the x64 binary.");
+            io::printPlainError("Cannot unlink DLL from x64 process. Please use the x64 binary.");
 
             return false;
 
@@ -44,8 +44,7 @@ namespace ldr {
             io::printInfo("Found module in target process.");
         }
         else {
-            io::printWinError("Could not find module in target process.");
-            
+            io::printWinError("Failed to find module in target process.");
 
             return false;
         }
@@ -53,25 +52,25 @@ namespace ldr {
         LDTE ldrEntry{};
 
         if (!ReadProcessMemory(hProc, pLdrEntry, &ldrEntry, sizeof(LDTE), nullptr)) {
-            io::printWinError("Could not read loader data table entry from target.");
+            io::printWinError("Failed to read loader data table entry from target.");
 
             return false;
         }
 
         if (!hax::mem::ex::unlinkListEntry(hProc, ldrEntry.InMemoryOrderLinks)) {
-            io::printPlainError("Could not unlink InMemoryOrder links.");
+            io::printPlainError("Failed to unlink InMemoryOrder links.");
             
             return false;
         }
 
         if (!hax::mem::ex::unlinkListEntry(hProc, ldrEntry.InLoadOrderLinks)) {
-            io::printPlainError("Could not unlink InLoadOrder links.");
+            io::printPlainError("Failed to unlink InLoadOrder links.");
 
             return false;
         }
 
         if (!hax::mem::ex::unlinkListEntry(hProc, ldrEntry.InInitializationOrderLinks)) {
-            io::printPlainError("Could not unlink InInitializationOrder links.");
+            io::printPlainError("Failed to unlink InInitializationOrder links.");
 
             return false;
         }
