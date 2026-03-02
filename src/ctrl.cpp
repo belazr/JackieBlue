@@ -122,7 +122,7 @@ namespace ctrl {
 
 		const DWORD procId = procIds[targetProcIdIndex];
 
-		io::printInfo("Injecting into process with ID: " + std::to_string(procId) + ".");
+		io::printInfo("Selected process with ID: " + std::to_string(procId) + ".");
 
 		HANDLE hProc = nullptr;
 
