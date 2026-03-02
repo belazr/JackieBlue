@@ -7,9 +7,7 @@ namespace ldr {
     template <typename LDTE>
     static bool unlinkLdrEntry(HANDLE hProc, const LDTE* pLdrEntry);
     
-    bool unlinkModule(HANDLE hProc, const char* dllName) {
-        BOOL isWow64 = FALSE;
-        IsWow64Process(hProc, &isWow64);
+    bool unlinkModule(HANDLE hProc, BOOL isWow64, const char* dllName) {
 
         if (isWow64) {
             const LDR_DATA_TABLE_ENTRY32* const pLdrEntry32 = hax::proc::ex::getLdrDataTableEntry32Address(hProc, dllName);
@@ -23,12 +21,6 @@ namespace ldr {
             const LDR_DATA_TABLE_ENTRY64* const pLdrEntry64 = hax::proc::ex::getLdrDataTableEntry64Address(hProc, dllName);
 
             return unlinkLdrEntry(hProc, pLdrEntry64);
-
-            #else
-
-            io::printPlainError("Cannot unlink DLL from x64 process. Please use the x64 binary.");
-
-            return false;
 
             #endif // _WIN64
 
