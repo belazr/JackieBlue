@@ -24,25 +24,7 @@ namespace manMap {
 	static MemoryRegion getShellCodeRegion(BOOL isWow64);
 	static bool writeShellCode(HANDLE hProc, const MemoryRegion* pShellCodeRegion, BOOL isWow64);
 
-	bool inject(HANDLE hProc, const char* dllPath, hax::launch::tLaunchFunc pLaunchFunc) {
-		BOOL isWow64 = FALSE;
-		
-		if (!IsWow64Process(hProc, &isWow64)) {
-			io::printWinError("Failed to get architecture of target process.");
-
-			return false;
-		}
-		
-		#ifndef _WIN64
-		
-		if (!isWow64) {
-			io::printPlainError("Cannot inject DLL into x64 process. Please use the x64 binary.");
-			
-			return false;
-		}
-
-		#endif // !_WIN64
-
+	bool inject(HANDLE hProc, BOOL isWow64, const char* dllPath, hax::launch::tLaunchFunc pLaunchFunc) {
 		ShellCodeParams params{};
 
 		if (!getShellCodeParams(hProc, &params)) {

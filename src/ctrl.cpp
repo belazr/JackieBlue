@@ -8,8 +8,7 @@ namespace ctrl {
 
 	static constexpr DWORD PROCESS_REQUIRED_ACCESS = (PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_CREATE_THREAD);
 
-	static void takeInjectionAction(io::Action curAction, io::LaunchMethod curLaunchMethod, io::HandleCreation curHandleCreation, const std::string& procName, const std::string& dllName, const std::string& dllDir);
-	static void takeUnlinkAction(io::HandleCreation curHandleCreation, const std::string& procName, const std::string& dllName);
+	static void takeAction(io::Action action, io::LaunchMethod launchMethod, io::HandleCreation handleCreation, const std::string& procName, const std::string& dllName, const std::string& dllDir);
 
 	void run(std::string procName, std::string dllName, std::string dllDir) {
 		io::init();
@@ -38,7 +37,6 @@ namespace ctrl {
 			case io::Action::UNLINK:
 				io::printHandleCreationMenu(curAction, curHandleCreation);
 				curHandleCreation = io::selectEnum(curHandleCreation);
-				io::initLog();
 				break;
 			case io::Action::CHANGE_TARGETS:
 				io::selectTargets(procName, dllName, dllDir);
@@ -47,18 +45,10 @@ namespace ctrl {
 				break;
 			}
 
-			switch (curAction) {
-			case io::Action::LOAD_LIB:
-			case io::Action::MAN_MAP:
-				takeInjectionAction(curAction, curLaunchMethod, curHandleCreation, procName, dllName, dllDir);
-				break;
-			case io::Action::UNLINK:
-				takeUnlinkAction(curHandleCreation, procName, dllName);
-				break;
-			default:
-				break;
-			}
+			if (curAction == io::Action::CHANGE_TARGETS) continue;
 
+			io::initLog();
+			takeAction(curAction, curLaunchMethod, curHandleCreation, procName, dllName, dllDir);
 		}
 
 		return;
@@ -66,46 +56,50 @@ namespace ctrl {
 
 
 	static HANDLE getProcessHandle(const std::string& procName, io::HandleCreation curHandleCreation);
-	static hax::launch::tLaunchFunc getLaunchFunction(io::LaunchMethod launchMethod, BOOL isWow64);
+	static bool getIsWow64(HANDLE hProc, BOOL& isWow64);
+	static void takeInjectionAction(io::Action action, io::LaunchMethod launchMethod, HANDLE hProc, BOOL isWow64, const std::string& dllName, const std::string& dllDir);
+	static void takeUnlinkAction(HANDLE hProc, BOOL isWow64, const std::string& dllName);
 
-	static void takeInjectionAction(io::Action curAction, io::LaunchMethod curLaunchMethod, io::HandleCreation curHandleCreation, const std::string& procName, const std::string& dllName, const std::string& dllDir) {
-		const HANDLE hProc = getProcessHandle(procName, curHandleCreation);
+	static void takeAction(io::Action action, io::LaunchMethod launchMethod, io::HandleCreation handleCreation, const std::string& procName, const std::string& dllName, const std::string& dllDir) {
+		const HANDLE hProc = getProcessHandle(procName, handleCreation);
 
 		if (!hProc) return;
 
 		BOOL isWow64 = FALSE;
-		IsWow64Process(hProc, &isWow64);
 
-		const hax::launch::tLaunchFunc pLaunchFunc = getLaunchFunction(curLaunchMethod, isWow64);
-
-		if (!pLaunchFunc) {
+		if (!getIsWow64(hProc, isWow64)) {
 			CloseHandle(hProc);
 
 			return;
 		}
 
-		const std::string dllFullPath = (dllDir + "\\" + dllName);
-		bool success = false;
+		#ifndef _WIN64
 
-		switch (curAction) {
+		if (!isWow64) {
+			io::printPlainError("Cannot interact with x64 process. Please use the x64 binary.");
+			CloseHandle(hProc);
+
+			return;
+		}
+
+		#endif // !_WIN64
+
+		switch (action) {
 		case io::Action::LOAD_LIB:
-			success = loadLib::inject(hProc, dllFullPath.c_str(), pLaunchFunc);
-			break;
 		case io::Action::MAN_MAP:
-			success = manMap::inject(hProc, dllFullPath.c_str(), pLaunchFunc);
+			takeInjectionAction(action, launchMethod, hProc, isWow64, dllName, dllDir);
+			break;
+		case io::Action::UNLINK:
+			takeUnlinkAction(hProc, isWow64, dllName);
 			break;
 		default:
 			break;
 		}
 
-		CloseHandle(hProc);
-
-		io::printInjectionResult(curAction, curLaunchMethod, success);
-
 		return;
 	}
-
-
+	
+	
 	static bool findProcIds(const std::string& procName, hax::Vector<DWORD>& procIds);
 
 	static HANDLE getProcessHandle(const std::string& procName, io::HandleCreation curHandleCreation) {
@@ -180,6 +174,45 @@ namespace ctrl {
 	}
 
 
+	static bool getIsWow64(HANDLE hProc, BOOL& isWow64) {
+
+		if (!IsWow64Process(hProc, &isWow64)) {
+			io::printWinError("Failed to get architecture of target process.");
+
+			return false;
+		}
+
+		return true;
+	}
+
+
+	static hax::launch::tLaunchFunc getLaunchFunction(io::LaunchMethod launchMethod, BOOL isWow64);
+
+	static void takeInjectionAction(io::Action curAction, io::LaunchMethod curLaunchMethod, HANDLE hProc, BOOL isWow64, const std::string& dllName, const std::string& dllDir) {
+		const hax::launch::tLaunchFunc pLaunchFunc = getLaunchFunction(curLaunchMethod, isWow64);
+
+		if (!pLaunchFunc) return;
+
+		const std::string dllFullPath = (dllDir + "\\" + dllName);
+		bool success = false;
+
+		switch (curAction) {
+		case io::Action::LOAD_LIB:
+			success = loadLib::inject(hProc, isWow64, dllFullPath.c_str(), pLaunchFunc);
+			break;
+		case io::Action::MAN_MAP:
+			success = manMap::inject(hProc, isWow64, dllFullPath.c_str(), pLaunchFunc);
+			break;
+		default:
+			break;
+		}
+
+		io::printInjectionResult(curAction, curLaunchMethod, success);
+
+		return;
+	}
+
+
 	static hax::launch::tLaunchFunc getLaunchFunction(io::LaunchMethod launchMethod, BOOL isWow64) {
 		hax::launch::tLaunchFunc pLaunchFunc = nullptr;
 
@@ -224,16 +257,9 @@ namespace ctrl {
 	}
 
 
-	static void takeUnlinkAction(io::HandleCreation curHandleCreation, const std::string& procName, const std::string& dllName) {
-		const HANDLE hProc = getProcessHandle(procName, curHandleCreation);
-
-		if (!hProc) return;
-
-		const bool success = ldr::unlinkModule(hProc, dllName.c_str());
-
+	static void takeUnlinkAction(HANDLE hProc, BOOL isWow64, const std::string& dllName) {
+		const bool success = ldr::unlinkModule(hProc, isWow64, dllName.c_str());
 		io::printUnlinkResult(success);
-
-		CloseHandle(hProc);
 
 		return;
 	}

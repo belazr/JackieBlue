@@ -11,6 +11,9 @@ namespace loadLib {
 	// Handle to the target process.
 	// Needs at least PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_WRITE, PROCESS_VM_READ access rights and the additional access rights required by the launch function.
 	// 
+	// [in] isWow64
+	// Is hProc a handle to a process running under WOW64.
+	// 
 	// [in] dllPath:
 	// Path of the DLL file to inject.
 	// 
@@ -19,6 +22,6 @@ namespace loadLib {
 	// 
 	// Return:
 	// True on success, false on failure
-	bool inject(HANDLE hProc, const char* dllPath, hax::launch::tLaunchFunc pLaunchFunc);
+	bool inject(HANDLE hProc, BOOL isWow64, const char* dllPath, hax::launch::tLaunchFunc pLaunchFunc);
 
 }
